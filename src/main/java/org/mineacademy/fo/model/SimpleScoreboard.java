@@ -1,11 +1,7 @@
 package org.mineacademy.fo.model;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-import java.util.function.Function;
-
+import lombok.Getter;
+import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -18,10 +14,14 @@ import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
-import lombok.Getter;
-import lombok.NonNull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * A simple way of rendering custom scoreboards for players with close to no flickering.
@@ -272,7 +272,14 @@ public class SimpleScoreboard {
      * @param entries
      */
     public final void addRows(final Object... entries) {
-        this.addRows(Arrays.asList(entries));
+        if (entries == null) return;
+        if (entries.length < 1) return;
+        for (Object ententy : entries) {
+            if (ententy instanceof List)
+                this.addRows((List) ententy);
+            else if (checkEntries(ententy))
+                add(ententy);
+        }
     }
 
     /**
@@ -283,8 +290,23 @@ public class SimpleScoreboard {
     public final void addRows(final List<Object> entries) {
         Valid.checkBoolean(
                 (this.rows.size() + entries.size()) < 17, "You are trying to add too many rows (the limit is 16)");
-        this.rows.addAll(
-                Common.convert(Common.colorize(Common.convert(entries, Object::toString)), ScoreboardLine::new));
+
+        entries.stream().filter(this::checkEntries).forEach(this::add);
+			/*this.rows.addAll(
+					Common.convert(Common.colorize(Common.convert(entries, Object::toString)), ScoreboardLine::new));*/
+    }
+
+    private void add(Object obj) {
+        String colorize = Common.colorize(obj.toString());
+        this.rows.add(new ScoreboardLine(colorize));
+    }
+
+    public final boolean checkEntries(Object entity) {
+        if (entity instanceof Map)
+            throw new FoException("you can´t add map need be ententys in singel list");
+        if (entity instanceof List)
+            throw new FoException("you can´t add List need be ententys in singel list");
+        return true;
     }
 
     public final void changeRow(final int index, Object value) {
