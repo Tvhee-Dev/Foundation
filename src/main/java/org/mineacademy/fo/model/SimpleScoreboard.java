@@ -17,10 +17,7 @@ import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -271,15 +268,10 @@ public class SimpleScoreboard {
      *
      * @param entries
      */
-    public final void addRows(final Object... entries) {
+    public final void addRows(final String... entries) {
         if (entries == null) return;
         if (entries.length < 1) return;
-        for (Object ententy : entries) {
-            if (ententy instanceof List)
-                this.addRows((List) ententy);
-            else if (checkEntries(ententy))
-                add(ententy);
-        }
+        this.addRows(Arrays.asList(entries));
     }
 
     /**
