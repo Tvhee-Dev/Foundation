@@ -12,9 +12,9 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
 import java.util.*;
@@ -268,43 +268,45 @@ public class SimpleScoreboard {
      *
      * @param entries
      */
-    public final void addRows(final String... entries) {
-        if (entries == null) return;
-        if (entries.length < 1) return;
+    public final void addRows(final Object... entries) {
+        Valid.checkBoolean(entries != null, "You cannot add a 'null' array!");
         this.addRows(Arrays.asList(entries));
     }
 
     /**
-     * Add rows onto the scoreboard
+     * Add rows to the scoreboard
      *
      * @param entries
      */
-    public final void addRows(final List<Object> entries) {
-        Valid.checkBoolean(
-                (this.rows.size() + entries.size()) < 17, "You are trying to add too many rows (the limit is 16)");
+    public final void addRows(final Collection<?> entries) {
+        Valid.checkBoolean(entries != null, "You cannot add a 'null' collection!");
+        Valid.checkBoolean(entries.size() < 17,
+                "You are trying to add too many rows (the limit is 16)");
 
-        entries.stream().filter(this::checkEntries).forEach(this::add);
-			/*this.rows.addAll(
-					Common.convert(Common.colorize(Common.convert(entries, Object::toString)), ScoreboardLine::new));*/
-    }
+        for (Object entry : entries) {
+            // do valid check here or stop the loop when hit max amount. I think you need set it to 15 not 17.
+            Valid.checkBoolean((this.rows.size() < 17),
+                    "You are trying to add too many rows (the limit is 16)");
+            if (entry instanceof Collection) {
+                this.addRows((Collection<?>) entry);
+                continue;
+            }
+            Valid.checkBoolean(ReflectionUtil.wrapperToPrimitive(entry.getClass()) != null ||
+                            entry.getClass().isPrimitive() || entry instanceof String,
+                    "Object of " + entry.getClass() + " is not supported! Please call 'toString()' to add it");
 
-    private void add(Object obj) {
-        String colorize = Common.colorize(obj.toString());
-        this.rows.add(new ScoreboardLine(colorize));
-    }
-
-    public final boolean checkEntries(Object entity) {
-        if (entity instanceof Map)
-            throw new FoException("you can´t add map need be ententys in singel list");
-        if (entity instanceof List)
-            throw new FoException("you can´t add List need be ententys in singel list");
-        return true;
+            this.rows.add(new ScoreboardLine(Common.colorize(String.valueOf(entry))));
+        }
     }
 
     public final void changeRow(final int index, Object value) {
-        Valid.checkBoolean(
-                index < this.rows.size(),
+        Valid.checkBoolean(index < this.rows.size(),
                 "The row for index " + index + " is currently not existing. Please use addRows()!");
+
+        Valid.checkBoolean(ReflectionUtil.wrapperToPrimitive(value.getClass()) != null ||
+                        value.getClass().isPrimitive() || value instanceof String,
+                "Object of " + value.getClass() + " is not supported! Please call 'toString()' to add it");
+
         this.rows.get(index).setText(Common.colorize(value.toString()));
     }
 
