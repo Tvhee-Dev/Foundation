@@ -350,8 +350,8 @@ public final class PlayerUtil {
 	 * @param permission
 	 * @return
 	 */
-	public static boolean hasPerm(final Permissible sender, String permission) {
-		Valid.checkNotNull(sender, "cannot call hasPerm for null sender!");
+	public static boolean hasPerm(final Permissible sender, final String permission) {
+		Valid.checkNotNull(sender, "Cannot call PlayerUtil#hasPerm() for null sender!");
 
 		if (permission == null) {
 			Common.log("THIS IS NOT AN ACTUAL ERROR, YOUR PLUGIN WILL WORK FINE");

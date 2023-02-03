@@ -88,6 +88,7 @@ public abstract class Menu {
 	 * <p>
 	 * Used in {@link #updateInventoryTitle(Menu, Player, String, String)}
 	 */
+	@Getter
 	@Setter
 	private static int titleAnimationDurationTicks = 20;
 
@@ -310,8 +311,7 @@ public abstract class Menu {
 			Valid.checkNotNull(button, "Null button field named " + field.getName() + " in " + this);
 			final Position position = field.getAnnotation(Position.class);
 
-			if (!(button instanceof DummyButton))
-				this.registeredButtons.put(button, position);
+			this.registeredButtons.put(button, position);
 
 		} else if (Button[].class.isAssignableFrom(type))
 			throw new FoException("Button[] is no longer supported in menu for " + this.getClass());
@@ -358,7 +358,7 @@ public abstract class Menu {
 				Valid.checkNotNull(button, "Menu button is null at " + this.getClass().getSimpleName());
 
 				ItemStack item = button.getItem();
-				Valid.checkNotNull(item, "Menu " + this.getTitle() + " contained button " + button.getClass().getSimpleName() + " with empty item!");
+				Valid.checkNotNull(item, "Menu " + this.getTitle() + " contained button " + button.getClass() + " named '" + button.getClass().getSimpleName() + "' with empty item!");
 
 				if (ItemUtil.isSimilar(fromItem, item))
 					return button;
@@ -694,7 +694,7 @@ public abstract class Menu {
 	 *
 	 * @param title the title to animate
 	 */
-	public final void animateTitle(final String title) {
+	public void animateTitle(final String title) {
 		if (titleAnimationEnabled)
 			PlayerUtil.updateInventoryTitle(this, this.getViewer(), title, this.getTitle(), titleAnimationDurationTicks);
 	}

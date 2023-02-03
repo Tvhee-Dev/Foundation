@@ -80,6 +80,9 @@ import fr.xephi.authme.api.v3.AuthMeApi;
 import github.scarsz.discordsrv.DiscordSRV;
 import github.scarsz.discordsrv.dependencies.jda.api.entities.TextChannel;
 import github.scarsz.discordsrv.util.DiscordUtil;
+import io.lumine.mythic.api.MythicProvider;
+import io.lumine.mythic.api.mobs.MobManager;
+import io.lumine.mythic.core.mobs.ActiveMob;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -101,14 +104,14 @@ import world.bentobox.bentobox.managers.IslandsManager;
 import world.bentobox.bentobox.managers.RanksManager;
 
 /**
- * Our main class hooking into different plugins, providing you
- * convenience access to their methods
+ * Our main class for hooking into different plugins, providing you
+ * convenient access to their methods.
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class HookManager {
 
 	// ------------------------------------------------------------------------------------------------------------
-	// Store hook classes separately for below, avoiding no such method/field errors
+	// Store hook classes separately below, avoiding no such method/field errors
 	// ------------------------------------------------------------------------------------------------------------
 
 	private static AdvancedVanishHook advancedVanishHook;
@@ -149,7 +152,7 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Detect various plugins and load their methods into this library so you can use it later
+	 * Detect various plugins and load their methods into this library so you can use it later.
 	 */
 	public static void loadDependencies() {
 
@@ -181,13 +184,13 @@ public final class HookManager {
 				discordSRVHook = new DiscordSRVHook();
 
 			} catch (final ClassNotFoundException ex) {
-				Common.error(ex, "&c" + SimplePlugin.getNamed() + " failed to hook DiscordSRV because the plugin is outdated (1.18.x is supported)!");
+				Common.error(ex, "&c" + SimplePlugin.getNamed() + " failed to hook into DiscordSRV because the plugin is outdated (1.18.x is supported)!");
 			}
 
 		if (Common.doesPluginExist("Essentials"))
 			essentialsHook = new EssentialsHook();
 
-		// Various kinds of Faction plugins
+		// Various kinds of Faction plugins.
 		final Plugin factions = Bukkit.getPluginManager().getPlugin("Factions");
 
 		if (Common.doesPluginExist("FactionsX") && factions == null)
@@ -210,7 +213,7 @@ public final class HookManager {
 				if (mplayer != null)
 					factionsHook = new FactionsMassive();
 				else
-					Common.warning("Recognized MCore Factions, but not hooked! Check if you have the latest version!");
+					Common.warning("Recognized MCore Factions, but it isn't hooked! Check if you have the latest version!");
 
 			}
 		}
@@ -236,7 +239,7 @@ public final class HookManager {
 			if (ver.startsWith("2."))
 				mcmmoHook = new McMMOHook();
 			else
-				Common.warning("Could not hook into mcMMO, version 2.x required, you have " + ver);
+				Common.warning("Could not hook into mcMMO. Version 2.x is required, you have " + ver);
 		}
 
 		if (Common.doesPluginExist("Multiverse-Core"))
@@ -260,13 +263,13 @@ public final class HookManager {
 			if (ver.startsWith("6.") || ver.startsWith("5.") || ver.startsWith("3."))
 				plotSquaredHook = new PlotSquaredHook();
 			else
-				Common.warning("Could not hook into PlotSquared, version 3.x, 5.x or 6.x required, you have " + ver);
+				Common.warning("Could not hook into PlotSquared. Version 3.x, 5.x or 6.x required, you have " + ver);
 		}
 
 		if (Common.doesPluginExist("ProtocolLib")) {
 			protocolLibHook = new ProtocolLibHook();
 
-			// Also check if the library is loaded properly
+			// Also check if the library is loaded properly.
 			try {
 				if (MinecraftVersion.newerThan(V.v1_6))
 					Class.forName("com.comphenix.protocol.wrappers.WrappedChatComponent");
@@ -292,7 +295,7 @@ public final class HookManager {
 		if (Common.doesPluginExist("WorldGuard"))
 			worldguardHook = new WorldGuardHook(worldeditHook);
 
-		// Dummy hooks
+		// Dummy hooks.
 
 		if (Common.doesPluginExist("NBTAPI"))
 			nbtAPIDummyHook = true;
@@ -305,11 +308,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Removes packet listeners from ProtocolLib for a plugin
+	 * Removes packet listeners from ProtocolLib for a plugin.
 	 *
-	 * @param plugin
+	 * @param plugin the plugin to use.
 	 *
-	 * @deprecated internal use only, please do not call
+	 * @deprecated internal use only, please do not call.
 	 */
 	@Deprecated
 	public static void unloadDependencies(final Plugin plugin) {
@@ -343,7 +346,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return if BanManager plugin is detected
+	 * Is BanManager loaded?
 	 *
 	 * @return
 	 */
@@ -352,7 +355,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return if BentoBox is detected
+	 * Is BentoBox loaded?
 	 *
 	 * @return
 	 */
@@ -361,7 +364,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return if Boss plugin is detected
+	 * Is Boss loaded?
 	 *
 	 * @return
 	 */
@@ -406,7 +409,8 @@ public final class HookManager {
 	}
 
 	/**
-	 * Are Faction plugins loaded? We support UUID factions and free factions
+	 * Are any Faction plugins loaded?
+	 * We support FactionsUUID and the free Factions.
 	 *
 	 * @return
 	 */
@@ -421,13 +425,13 @@ public final class HookManager {
 	 */
 	public static boolean isFAWELoaded() {
 
-		// Check for FAWE directly
+		// Check for FastAsyncWorldEdit directly.
 		final Plugin fawe = Bukkit.getPluginManager().getPlugin("FastAsyncWorldEdit");
 
 		if (fawe != null && fawe.isEnabled())
 			return true;
 
-		// Check for legacy FAWE installations
+		// Check for legacy FastAsyncWorldEdit installations.
 		final Plugin worldEdit = Bukkit.getPluginManager().getPlugin("WorldEdit");
 
 		if (worldEdit != null && worldEdit.isEnabled() && "Fast Async WorldEdit plugin".equals(worldEdit.getDescription().getDescription()))
@@ -437,7 +441,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Is ItemsAdder loaded as a plugin?
+	 * Is ItemsAdder loaded?
 	 *
 	 * @return
 	 */
@@ -446,7 +450,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Is Lands loaded as a plugin?
+	 * Is Lands loaded?
 	 *
 	 * @return
 	 */
@@ -464,7 +468,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Is Lockette Pro loaded
+	 * Is Lockette Pro loaded?
 	 *
 	 * @return
 	 */
@@ -518,7 +522,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Is NBTAPI loaded as a plugin?
+	 * Is NBTAPI loaded?
 	 *
 	 * @return
 	 */
@@ -536,7 +540,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Is nuVotifier loaded as a plugin?
+	 * Is nuVotifier loaded?
 	 *
 	 * @return
 	 */
@@ -563,11 +567,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Is ProtocolLib loaded?¡
+	 * Is ProtocolLib loaded?
 	 * <p>
-	 * This will not only check if the plugin is in plugins folder, but also if it's
-	 * correctly loaded and working. (*Should* detect plugin's malfunction when
-	 * out-dated.)
+	 * This will not only check if the plugin is in the plugins folder, but
+	 * also if it's correctly loaded and working. (Should detect the plugin's
+	 * malfunction when it's outdated).
 	 *
 	 * @return
 	 */
@@ -642,9 +646,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return true if player is logged via AuthMe, or true if AuthMe is not installed
+	 * Return true if the player is logged via AuthMe, or true if AuthMe is not installed.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static boolean isLogged(final Player player) {
@@ -652,39 +656,40 @@ public final class HookManager {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
-	// Boss-related plugins
+	// Boss and MythicMobs.
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Returns the Boss name from the given entity, if Boss plugin is installed and
-	 * the given entity is a Boss, otherwise returns null.
+	 * Returns the Boss name from the given entity, if Boss is installed
+	 * and the given entity is a Boss, otherwise returns null.
 	 *
-	 * @param entity
+	 * @param entity the entity to check.
 	 * @return
 	 */
-	public static String getBossName(Entity entity) {
+	public static String getBossName(@NonNull Entity entity) {
 		return isBossLoaded() ? bossHook.getBossName(entity) : null;
 	}
 
 	/**
-	 * Returns the name from the given entity, if MythicMobs plugin is installed and
-	 * the given entity is a mythic mob, otherwise returns null.
+	 * Returns the name from the given entity, if MythicMobs is installed
+	 * and the given entity is a MythicMob, otherwise returns null.
 	 *
-	 * @param entity
+	 * @param entity the entity to check.
 	 * @return
 	 */
-	public static String getMythicMobName(Entity entity) {
+	public static String getMythicMobName(@NonNull Entity entity) {
 		return isMythicMobsLoaded() ? mythicMobsHook.getBossName(entity) : null;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
-	// BentoBox-related plugins
+	// BentoBox
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return BentoBox island visitors for the specified player's island, or empty set if null
+	 * Return the visitors for the specified player's island, or an empty
+	 * set if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxVisitors(Player player) {
@@ -692,9 +697,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island coops for the specified player's island, or empty set if null
+	 * Return the coops for the specified player's island, or an empty set
+	 * if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxCoops(Player player) {
@@ -702,9 +708,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island trustees for the specified player's island, or empty set if null
+	 * Return the trustees for the specified player's island, or an empty
+	 * set if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxTrustees(Player player) {
@@ -712,9 +719,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island members for the specified player's island, or empty set if null
+	 * Return the members for the specified player's island, or an empty
+	 * set if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxMembers(Player player) {
@@ -722,9 +730,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island subowners for the specified player's island, or empty set if null
+	 * Return the subowners for the specified player's island, or an empty
+	 * set if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxSubOwners(Player player) {
@@ -732,9 +741,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island owners for the specified player's island, or empty set if null
+	 * Return the owners for the specified player's island, or an empty set
+	 * if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxOwners(Player player) {
@@ -742,9 +752,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island moderators for the specified player's island, or empty set if null
+	 * Return the moderators for the specified player's island, or an empty
+	 * set if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxMods(Player player) {
@@ -752,9 +763,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return BentoBox island admins for the specified player's island, or empty set if null
+	 * Return the admins for the specified player's island, or an empty set
+	 * if it's null.
 	 *
-	 * @param player
+	 * @param player the player's island to check.
 	 * @return
 	 */
 	public static Set<UUID> getBentoBoxAdmins(Player player) {
@@ -766,9 +778,10 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return lands players for the player's land, or empty list
+	 * Return the players for the player's land, or an empty list if it's
+	 * null.
 	 *
-	 * @param player
+	 * @param player the player's land to check.
 	 * @return
 	 */
 	public static Collection<Player> getLandPlayers(Player player) {
@@ -776,13 +789,14 @@ public final class HookManager {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
-	// EssentialsX, CMI or AdvancedVanish
+	// AdvancedVanish, CMI and EssentialsX
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return true if the given player is afk in EssentialsX or CMI, or false if neither plugin is present
+	 * Return true if the given player is AFK in EssentialsX or CMI, or
+	 * false if neither plugin is present.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static boolean isAfk(final Player player) {
@@ -793,10 +807,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if the given player is vanished in EssentialsX
+	 * Return true if the given player is vanished in EssentialsX.
 	 *
-	 * @deprecated this does not call metadata check for most plugins nor NMS check, see {@link PlayerUtil#isVanished(Player)}
-	 * @param player
+	 * @deprecated this does not call a metadata check for most plugins,
+	 *             nor an NMS check. See {@link PlayerUtil#isVanished(Player)}.
+	 * @param player the player to check.
 	 * @return
 	 */
 	@Deprecated
@@ -805,10 +820,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if the given player is vanished in CMI
+	 * Return true if the given player is vanished in CMI.
 	 *
-	 * @deprecated this does not call metadata check for most plugins nor NMS check, see {@link PlayerUtil#isVanished(Player)}
-	 * @param player
+	 * @deprecated this does not call a metadata check for most plugins,
+	 *             nor an NMS check. See {@link PlayerUtil#isVanished(Player)}.
+	 * @param player the player to check.
 	 * @return
 	 */
 	@Deprecated
@@ -817,10 +833,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if the given player is vanished in AdvancedVanish
+	 * Return true if the given player is vanished in AdvancedVanish.
 	 *
-	 * @deprecated this does not call metadata check for most plugins nor NMS check, see {@link PlayerUtil#isVanished(Player)}
-	 * @param player
+	 * @deprecated this does not a call metadata check for most plugins,
+	 *             nor an NMS check. See {@link PlayerUtil#isVanished(Player)}.
+	 * @param player the player to check.
 	 * @return
 	 */
 	@Deprecated
@@ -829,11 +846,14 @@ public final class HookManager {
 	}
 
 	/**
-	 * Sets the vanish status for player in CMI, Essentials and AdvancedVanish
+	 * Sets the vanish status for the player in AdvancedVanish, CMI and
+	 * EssentialsX.
 	 *
-	 * @deprecated this does not remove vanish metadata and NMS invisibility, use {@link PlayerUtil#setVanished(Player, boolean)} for that
-	 * @param player
-	 * @param vanished
+	 * @deprecated this does not remove the vanish metadata and NMS
+	 * invisibility. Use {@link PlayerUtil#setVanished(Player, boolean)}
+	 * for that.
+	 * @param player   the player whose vanish status you want to set.
+	 * @param vanished the state to set the player's vanish to.
 	 */
 	@Deprecated
 	public static void setVanished(@NonNull Player player, boolean vanished) {
@@ -848,9 +868,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if the player is muted in EssentialsX or CMI, or false if neither plugin is present
+	 * Return true if the player is muted in BanManager, CMI, EssentialsX
+	 * or LiteBans, or false if none of these plugins are present.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static boolean isMuted(final Player player) {
@@ -871,11 +892,12 @@ public final class HookManager {
 	}
 
 	/**
-	 * If litebans is loaded, mute player - this expects you having /lmute command installed!
+	 * Mutes the given player if LiteBans is installed. This expects you to
+	 * have the /lmute command!
 	 *
-	 * @param targetPlayerName
-	 * @param durationTokenized
-	 * @param reason
+	 * @param targetPlayerName  the player to mute.
+	 * @param durationTokenized the duration to mute the player for.
+	 * @param reason            the reason to mute the player for.
 	 */
 	public static void setLiteBansMute(String targetPlayerName, String durationTokenized, String reason) {
 		if (isLiteBansLoaded())
@@ -883,9 +905,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * If litebans is loaded, unmute player - this expects you having /lunmute command installed!
+	 * Unmutes the given player if LiteBans is installed. This expects you
+	 * to have the /lunmute command!
 	 *
-	 * @param targetPlayerName
+	 * @param targetPlayerName the player to unmute.
 	 */
 	public static void setLiteBansUnmute(String targetPlayerName) {
 		if (isLiteBansLoaded())
@@ -893,9 +916,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Returns if the player has god mode either from Essentials or CMI
+	 * Return true if the given player has god mode in EssentialsX or CMI,
+	 * or false if neither plugin is present.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static boolean hasGodMode(final Player player) {
@@ -906,10 +930,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Toggles a god mode for player from EssentialsX or CMI
+	 * Sets the player's god mode status in CMI and EssentialsX.
 	 *
-	 * @param player
-	 * @param godMode
+	 * @param player  the player whose god mode status you want to set.
+	 * @param godMode the state to set the player's god mode to.
 	 */
 	public static void setGodMode(final Player player, final boolean godMode) {
 		if (isEssentialsLoaded())
@@ -920,10 +944,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Sets the last /back location for both EssentialsX and CMI
+	 * Sets the player's last /back location in CMI and EssentialsX.
 	 *
-	 * @param player
-	 * @param location
+	 * @param player   the player whose /back location you want to set.
+	 * @param location the location to set the player's /back location to.
 	 */
 	public static void setBackLocation(final Player player, final Location location) {
 		if (isEssentialsLoaded())
@@ -934,11 +958,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Set EssentialsX and CMI ignored player
+	 * Sets the player's ignore status for the given target in CMI and Esse
 	 *
-	 * @param player
-	 * @param who
-	 * @param ignore
+	 * @param player the player whose ignore status you want to set.
+	 * @param who    the target player who you want the player to ignore.
+	 * @param ignore the state to set the player's ignore status to.
 	 */
 	public static void setIgnore(final UUID player, final UUID who, final boolean ignore) {
 		if (isEssentialsLoaded())
@@ -949,10 +973,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if the player is ignoring another player in EssentialsX
+	 * Return true if the player is ignoring another player in CMI or EssentialsX,
+	 * or false if neither plugin is present.
 	 *
-	 * @param player
-	 * @param who
+	 * @param player the player to check.
+	 * @param who    the target player to check.
 	 * @return
 	 */
 	public static boolean isIgnoring(final UUID player, final UUID who) {
@@ -963,9 +988,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Returns the nick for the given recipient from Essentials or Nicky, or if it's a console, their name
+	 * Returns the colored nickname of the given recipient from CMI,
+	 * EssentialsX or Nicky, or if it's a console, their name.
 	 *
-	 * @param sender
+	 * @param sender the player who's nickname you want to get.6
 	 * @return
 	 */
 	public static String getNickColored(final CommandSender sender) {
@@ -973,9 +999,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Returns the nick for the given recipient from Essentials or Nicky, or if it's a console, their name
+	 * Returns the nickname, stripped of colors, for the given recipient from
+	 * CMI, EssentialsX or Nicky, or if it's a console, their name.
 	 *
-	 * @param sender
+	 * @param sender the player whose nickname you want to get.
 	 * @return
 	 */
 	public static String getNickColorless(final CommandSender sender) {
@@ -983,10 +1010,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Returns the nick for the given recipient from Essentials or Nicky, or if it's a console, their name
+	 * Returns the nickname for the given recipient from CMI, EssentialsX or
+	 * Nicky, or if it's a console, their name.
 	 *
-	 * @param sender
-	 * @param stripColors
+	 * @param sender      the player whose nickname you want to get.
+	 * @param stripColors should we strip colors from the nickname?
 	 *
 	 * @return
 	 */
@@ -1012,10 +1040,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Attempts to find a nick from the given player name, defaulting to the given name if null
-	 * We support EssentialsX and CMI only.
+	 * Attempts to find a nickname from the given player name, defaulting to
+	 * the given name if it's null. We only support CMI and EssentialsX.
 	 *
-	 * @param playerName
+	 * @param playerName the player name to use.
 	 * @return
 	 */
 	public static String getNickFromName(final String playerName) {
@@ -1026,10 +1054,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Sets the nickname for Essentials and CMI if installed for the given target player
+	 * Sets the given player's nickname for CMI and EssentialsX.
 	 *
-	 * @param playerId
-	 * @param nick
+	 * @param playerId the player whose nickname you want to set.
+	 * @param nick     the nickname to set.
 	 */
 	public static void setNick(@NonNull final UUID playerId, @Nullable String nick) {
 		if (isEssentialsLoaded())
@@ -1040,11 +1068,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Attempts to reverse lookup player name from his nick
+	 * Attempts to reverse lookup a player's name from their nickname.
+	 * Only CMI and EssentialsX are supported.
 	 *
-	 * Only Essentials and CMI are supported
-	 *
-	 * @param nick
+	 * @param nick the nickname to use.
 	 * @return
 	 */
 	public static String getNameFromNick(@NonNull String nick) {
@@ -1059,9 +1086,10 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return the reply recipient for the given player, or null if not exist
+	 * Return the reply recipient for the given player, or null if it doesn't
+	 * exist.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static Player getReplyTo(final Player player) {
@@ -1073,9 +1101,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Use ItemsAdder to replace font images in the message
+	 * Use ItemsAdder to replace font images in the message.
 	 *
-	 * @param message
+	 * @param message the message.
 	 * @return
 	 */
 	public static String replaceFontImages(final String message) {
@@ -1085,8 +1113,8 @@ public final class HookManager {
 	/**
 	 * Use ItemsAdder to replace font images in the message based on the player's permission
 	 *
-	 * @param player
-	 * @param message
+	 * @param player  the player to use.
+	 * @param message the message.
 	 * @return
 	 */
 	public static String replaceFontImages(@Nullable Player player, final String message) {
@@ -1098,9 +1126,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Returns the world name alias from Multiverse-Core
+	 * Returns the world name's alias from Multiverse-Core.
 	 *
-	 * @param world
+	 * @param world the world to use.
 	 * @return
 	 */
 	public static String getWorldAlias(final World world) {
@@ -1112,9 +1140,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return players nation from Towny, or null if not loaded
+	 * Return the player's nation from Towny, or null if it isn't loaded.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static String getNation(final Player player) {
@@ -1122,9 +1150,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return players town name from Towny, or null if none
+	 * Return the player's town name from Towny, or null if there is none.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static String getTownName(final Player player) {
@@ -1132,9 +1160,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the online residents in players town, or an empty list
+	 * Return the online residents in the player's town, or an empty list.
 	 *
-	 * @param player
+	 * @param player the player's town to check.
 	 * @return
 	 */
 	public static Collection<? extends Player> getTownResidentsOnline(final Player player) {
@@ -1142,9 +1170,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the online nation players in players nation (Towny), or an empty list
+	 * Return the online nation players in the player's nation, or an empty
+	 * list.
 	 *
-	 * @param player
+	 * @param player the player's nation to check.
 	 * @return
 	 */
 	public static Collection<? extends Player> getNationPlayersOnline(final Player player) {
@@ -1152,9 +1181,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the online nation players in players ally (Towny), or an empty list
+	 * Return the online nation players in the player's ally, or an empty list.
 	 *
-	 * @param player
+	 * @param player the player's ally to check.
 	 * @return
 	 */
 	public static Collection<? extends Player> getAllyPlayersOnline(final Player player) {
@@ -1162,9 +1191,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the town owner name at the given location or null if none
+	 * Return the town owner name at the given location, or null if there is none.
 	 *
-	 * @param location
+	 * @param location the location to check.
 	 * @return
 	 */
 	public static String getTownOwner(final Location location) {
@@ -1172,9 +1201,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the town name at the given location or null if none
+	 * Return the town name at the given location, or null if there is none.
 	 *
-	 * @param location
+	 * @param location the location to check.
 	 * @return
 	 */
 	public static String getTown(final Location location) {
@@ -1182,7 +1211,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return a list of all loaded towns, or an empty list if none
+	 * Return a list of all loaded towns, or an empty list if there are none.
 	 *
 	 * @return
 	 */
@@ -1195,9 +1224,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return the Vault player prefix or empty if none
+	 * Return the player's prefix, or an empty string if they don't have one.
 	 *
-	 * @param player
+	 * @param player the player whose prefix you want to get.
 	 * @return
 	 */
 	public static String getPlayerPrefix(final Player player) {
@@ -1205,9 +1234,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the Vault player suffix or empty if none
+	 * Return the player's suffix, or an empty string if they don't have one.
 	 *
-	 * @param player
+	 * @param player the player whose suffix you want to get.
 	 * @return
 	 */
 	public static String getPlayerSuffix(final Player player) {
@@ -1215,9 +1244,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the Vault player permission group or empty if none
+	 * Return the player's permission group, or an empty string if they don't
+	 * have one.
 	 *
-	 * @param player
+	 * @param player the player whose permission group you want to get.
 	 * @return
 	 */
 	public static String getPlayerPermissionGroup(final Player player) {
@@ -1225,9 +1255,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the players balance from Vault (hooks into your economy plugin)
+	 * Return the player's balance from Vault (hooks into your economy plugin).
 	 *
-	 * @param player
+	 * @param player the player whose balance you want to get.
 	 * @return
 	 */
 	public static double getBalance(final Player player) {
@@ -1235,7 +1265,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the singular currency name, or null if not loaded
+	 * Return the singular currency name, or null if Vault isn't loaded.
 	 *
 	 * @return
 	 */
@@ -1244,7 +1274,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the plural currency name, or null if not loaded
+	 * Return the plural currency name, or null if Vault isn't loaded.
 	 *
 	 * @return
 	 */
@@ -1253,10 +1283,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Takes money from the player if Vault is installed
+	 * Takes the given amount of money from the player if Vault is installed.
 	 *
-	 * @param player
-	 * @param amount
+	 * @param player the player to take the money from.
+	 * @param amount the amount of money to take.
 	 */
 	public static void withdraw(final Player player, final double amount) {
 		if (isVaultLoaded())
@@ -1264,10 +1294,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Gives money to the player if Vault is installed
+	 * Gives the given amount of money to the player if Vault is installed.
 	 *
-	 * @param player
-	 * @param amount
+	 * @param player the player to give the money to.
+	 * @param amount the amount of money to give.
 	 */
 	public static void deposit(final Player player, final double amount) {
 		if (isVaultLoaded())
@@ -1275,12 +1305,13 @@ public final class HookManager {
 	}
 
 	/**
-	 * Checks if the given player has the given permission, safe to use
-	 * for instances where the player may be a temporary player from
-	 * ProtocolLib where then we use Vault to check the players perm
+	 * Checks if the given player has the given permission. This is
+	 * safe to use for instances where the player may be a temporary
+	 * player from ProtocolLib, where then we use Vault to check the
+	 * player's permission.
 	 *
-	 * @param player
-	 * @param perm
+	 * @param player the player to check.
+	 * @param perm   the permission to check.
 	 * @return
 	 */
 	public static boolean hasProtocolLibPermission(Player player, String perm) {
@@ -1291,11 +1322,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Checks if the given player name has a certain permission using vault
-	 * Or throws an error if Vault is not present
+	 * Checks if the given player name has a certain permission using Vault,
+	 * throwing an error if Vault is not present.
 	 *
-	 * @param offlinePlayer
-	 * @param perm
+	 * @param offlinePlayer the player to check.
+	 * @param perm          the permission to check.
 	 *
 	 * @return
 	 */
@@ -1306,9 +1337,31 @@ public final class HookManager {
 	}
 
 	/**
-	 * Returns the players primary permission group using Vault, or empty if none
+	 * Checks if the given command sender has the given permission.
 	 *
-	 * @param player
+	 * You are advised to do the following checks beforehand,
+	 * this method does not have them for maximum performance:
+	 *
+	 * **SENDER AND PERMISSION MUST NOT BE NULL**
+	 * **VAULT MUST BE INSTALLED**
+	 *
+	 * Returns NULL if Vault could not connect to a compatible Permission plugin.
+	 * Returns TRUE or FALSE depending on the result of the Vault check.
+	 * Returns FALSE on exception and fails silently by printing the error to the console.
+	 *
+	 * @param sender
+	 * @param perm
+	 * @return
+	 */
+	public static Boolean hasVaultPermissionFast(final CommandSender sender, final String permission) {
+		return vaultHook.hasPerm(sender, permission);
+	}
+
+	/**
+	 * Returns the player's primary permission group using Vault, or an empty
+	 * string if they don't have one.
+	 *
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static String getPlayerPrimaryGroup(final Player player) {
@@ -1316,7 +1369,8 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if Vault could find a suitable chat plugin to hook to
+	 * Returns true if Vault was able to find a suitable chat plugin to hook
+	 * into.
 	 *
 	 * @return
 	 */
@@ -1325,7 +1379,8 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if Vault could find a suitable economy plugin to hook to
+	 * Returns true if Vault was able to find a suitable economy plugin to
+	 * hook into.
 	 *
 	 * @return
 	 */
@@ -1334,9 +1389,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Updates Vault service providers
+	 * Updates the Vault service providers.
 	 *
-	 * @deprecated internal use only
+	 * @deprecated internal use only.
 	 */
 	@Deprecated
 	public static void updateVaultIntegration() {
@@ -1345,14 +1400,15 @@ public final class HookManager {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
-	// PlaceholderAPI / MVdWPlaceholderAPI
+	// PlaceholderAPI and MVdWPlaceholderAPI
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Uses PlaceholderAPI and MVdWPlaceholderAPI to replace placeholders in a message
+	 * Uses PlaceholderAPI and MVdWPlaceholderAPI to replace placeholders in a
+	 * message.
 	 *
-	 * @param player
-	 * @param message
+	 * @param player  the player to parse the placeholders against.
+	 * @param message the message to parse the placeholders in.
 	 * @return
 	 */
 	public static String replacePlaceholders(final @Nullable OfflinePlayer player, String message) {
@@ -1366,11 +1422,11 @@ public final class HookManager {
 	}
 
 	/**
-	 * Uses PlaceholderAPI to replace relation placeholders in a message
+	 * Uses PlaceholderAPI to replace relational placeholders in a message.
 	 *
-	 * @param one
-	 * @param two
-	 * @param message
+	 * @param one     the first player to compare.
+	 * @param two     the second player to compare.
+	 * @param message the message to parse the placeholders in.
 	 * @return
 	 */
 	public static String replaceRelationPlaceholders(final Player one, final Player two, final String message) {
@@ -1381,22 +1437,25 @@ public final class HookManager {
 	}
 
 	/**
-	 * If PlaceholderAPI is loaded, registers a new placeholder within it
-	 * with the given variable and value.
+	 * If PlaceholderAPI is loaded, this method registers a new placeholder
+	 * within it with the given variable and value.
 	 * <p>
-	 * 		The variable is automatically prepended with your plugin name, lowercased + _,
-	 * 		such as chatcontrol_ or boss_ + your variable.
+	 * 		The variable is automatically prepended with your plugin name,
+	 *      lowercased + _, such as chatcontrol_ or boss_ + your variable.
 	 * <p>
-	 * 		Example if the variable is player health in ChatControl plugin: "chatcontrol_health"
+	 * 		Example: if the variable is player health in ChatControl: "chatcontrol_health".
 	 * <p>
-	 * 		The value will be called against the given player
+	 * 		The value will be called against the given player.
 	 * <p>
 	 *
-	 * 	 * ATTENTION: We now have a new system where you register variables through {@link Variables#addExpansion(SimpleExpansion)}
-	 * 			   instead. It gives you better flexibility and, like PlaceholderAPI, you can replace different variables on the fly.
+	 * 	 * ATTENTION: We now have a new system where you register variables
+	 *                through {@link Variables#addExpansion(SimpleExpansion)}
+	 * 			      instead. It gives you better flexibility and, like
+	 *                PlaceholderAPI, you can replace different variables on
+	 *                the fly.
 	 *
-	 * @param variable
-	 * @param value
+	 * @param variable the variable to add.
+	 * @param value    the value of the variable.
 	 */
 	public static void addPlaceholder(final String variable, final Function<Player, String> value) {
 		Variables.addExpansion(new SimpleExpansion() {
@@ -1413,7 +1472,7 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Get all loaded Factions or null if none
+	 * Get all loaded Factions, or null if there are none.
 	 *
 	 * @return
 	 */
@@ -1422,9 +1481,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the players faction or null if none
+	 * Return the player's faction, or null if they don't have one.
 	 *
-	 * @param player
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static String getFaction(final Player player) {
@@ -1432,9 +1491,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return players in players faction or empty if none
+	 * Return the players in the player's faction, or empty if there are none.
 	 *
-	 * @param player
+	 * @param player the player's faction to check.
 	 * @return
 	 */
 	public static Collection<? extends Player> getOnlineFactionPlayers(final Player player) {
@@ -1442,9 +1501,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return a faction name at the given location, or null
+	 * Return a faction name at the given location, or null if there is none.
 	 *
-	 * @param location
+	 * @param location the location to check.
 	 * @return
 	 */
 	public static String getFaction(final Location location) {
@@ -1452,9 +1511,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the faction owner name at the given location, or null
+	 * Return the faction owner's name at the given location, or null if there
+	 * is none.
 	 *
-	 * @param location
+	 * @param location the location to check.
 	 * @return
 	 */
 	public static String getFactionOwner(final Location location) {
@@ -1468,24 +1528,24 @@ public final class HookManager {
 	/**
 	 * Adds a {@link PacketAdapter} packet listener to ProtocolLib.
 	 * <p>
-	 * If the plugin is missing, an error will be thrown
+	 * If the plugin is missing, an error will be thrown.
 	 *
-	 * @param adapter
+	 * @param adapter the adapter to add.
 	 */
-	public static void addPacketListener(/*Uses object to prevent errors if plugin is not installed*/final Object adapter) {
+	public static void addPacketListener(/* Uses an Object to prevent errors if the plugin is not installed. */final Object adapter) {
 		Valid.checkBoolean(isProtocolLibLoaded(), "Cannot add packet listeners if ProtocolLib isn't installed");
 
 		protocolLibHook.addPacketListener(adapter);
 	}
 
 	/**
-	 * Send a {@link PacketContainer} to the given player
+	 * Send a {@link PacketContainer} to the given player.
 	 *
-	 * @param player
-	 * @param packetContainer
+	 * @param player          the player to send the packet container to.
+	 * @param packetContainer the packet container to send.
 	 */
 	public static void sendPacket(final Player player, final Object packetContainer) {
-		Valid.checkBoolean(isProtocolLibLoaded(), "Sending packets requires ProtocolLib installed and loaded");
+		Valid.checkBoolean(isProtocolLibLoaded(), "Sending packets requires ProtocolLib to be installed and loaded");
 
 		protocolLibHook.sendPacket(player, packetContainer);
 	}
@@ -1495,9 +1555,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return the LWC owner of the block, or null
+	 * Return the owner of the given block in LWC, or null if there is none.
 	 *
-	 * @param block
+	 * @param block the block to check.
 	 * @return
 	 */
 	public static String getLWCOwner(final Block block) {
@@ -1509,10 +1569,10 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return if the given player owns the given block from Lockette Pro
+	 * Return if the given player owns the given block from Lockette Pro.
 	 *
-	 * @param block
-	 * @param player
+	 * @param block  the block to check.
+	 * @param player the player to check.
 	 * @return
 	 */
 	public static boolean isLocketteOwner(final Block block, final Player player) {
@@ -1524,7 +1584,7 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return a list of Residence residences at the given location or an empty list
+	 * Return a list of Residences, or an empty list if there are none.
 	 *
 	 * @return
 	 */
@@ -1533,9 +1593,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Get the Residence name at the given location or null if none
+	 * Get the Residence name at the given location, or null if there is none.
 	 *
-	 * @param location
+	 * @param location the location to check.
 	 * @return
 	 */
 	public static String getResidence(final Location location) {
@@ -1543,9 +1603,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Get the Residence owner at the given location or null if none
+	 * Get the Residence owner at the given location, or null if there is none.
 	 *
-	 * @param location
+	 * @param location the location to check.
 	 * @return
 	 */
 	public static String getResidenceOwner(final Location location) {
@@ -1557,9 +1617,10 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return WorldGuard list of regions at the given location or an empty list
+	 * Return a list of regions at the given location, or an empty list if
+	 * there are none.
 	 *
-	 * @param loc
+	 * @param loc the location to check.
 	 * @return
 	 */
 	public static List<String> getRegions(final Location loc) {
@@ -1567,7 +1628,7 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return WorldGuard list of loaded regions or an empty list
+	 * Return a list of loaded regions, or an empty list if there are none.
 	 *
 	 * @return
 	 */
@@ -1576,9 +1637,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Get our representation of a worldguard region by its name or null
+	 * Get our representation of a WorldGuard region by its name, or null if
+	 * there are none.
 	 *
-	 * @param name
+	 * @param name the name to use.
 	 * @return
 	 */
 	public static Region getRegion(final String name) {
@@ -1590,9 +1652,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Get a list of players inside a PlotSquared plot, or empty if not loaded
+	 * Get a list of players inside a plot, or empty if the plugin isn't loaded.
 	 *
-	 * @param players
+	 * @param players the player's location to check for players.
 	 * @return
 	 */
 	public static Collection<? extends Player> getPlotPlayers(final Player players) {
@@ -1604,9 +1666,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return the active mcMMO party chat
+	 * Return the active mcMMO party chat.
 	 *
-	 * @param player
+	 * @param player the player to check for.
 	 * @return
 	 */
 	public static String getActivePartyChat(final Player player) {
@@ -1614,9 +1676,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the online residents in player's party, or an empty list
+	 * Return the online residents in a player's party, or an empty list if
+	 * there are none.
 	 *
-	 * @param player
+	 * @param player the player's party to check.
 	 * @return
 	 */
 	public static List<Player> getMcMMOPartyRecipients(final Player player) {
@@ -1628,9 +1691,9 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return true if the entity is a Citizens NPC
+	 * Return true if the entity is a Citizens NPC.
 	 *
-	 * @param entity
+	 * @param entity the entity to check.
 	 * @return
 	 */
 	public static boolean isNPC(final Entity entity) {
@@ -1638,9 +1701,9 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the target of the entity
+	 * Return the target of the entity.
 	 *
-	 * @param entity
+	 * @param entity the entity to check.
 	 * @return
 	 */
 	public static Entity getNPCTarget(final Entity entity) {
@@ -1652,22 +1715,24 @@ public final class HookManager {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return all linked Discord channels. You can link those in DiscordSRV config.yml file
+	 * Return all linked Discord channels. You can link those in the config.yml
+	 * of DiscordSRV.
 	 *
-	 * @return the linked channels or an empty set when DiscordSRV is not loaded
+	 * @return the linked channels, or an empty set if DiscordSRV is not loaded.
 	 */
 	public static Set<String> getDiscordChannels() {
 		return isDiscordSRVLoaded() ? discordSRVHook.getChannels() : new HashSet<>();
 	}
 
 	/**
-	 * Sends a message from the given sender to a certain channel on Discord using DiscordSRV
+	 * Sends a message from the given sender to a certain channel on Discord
+	 * using DiscordSRV.
 	 * <p>
-	 * Enhanced functionality is available if the sender is a player
+	 * Enhanced functionality is available if the sender is a player.
 	 *
-	 * @param sender
-	 * @param channel
-	 * @param message
+	 * @param sender  the sender to send the message from.
+	 * @param channel the channel to send the message in.
+	 * @param message the message to send.
 	 */
 	public static void sendDiscordMessage(final CommandSender sender, final String channel, @NonNull final String message) {
 		if (isDiscordSRVLoaded() && !Common.stripColors(message).isEmpty())
@@ -1675,10 +1740,10 @@ public final class HookManager {
 	}
 
 	/**
-	 * Send a message to a Discord channel if DiscordSRV is installed
+	 * Send a message to a Discord channel if DiscordSRV is installed.
 	 *
-	 * @param channel
-	 * @param message
+	 * @param channel the channel to send the message in.
+	 * @param message the message to send.
 	 */
 	public static void sendDiscordMessage(final String channel, @NonNull final String message) {
 		if (isDiscordSRVLoaded() && !Common.stripColors(message).isEmpty())
@@ -1689,7 +1754,7 @@ public final class HookManager {
 // ------------------------------------------------------------------------------------------------------------
 //
 // Below are the individual classes responsible for hooking into third party plugins
-// and getting data from them. Due to often changes we do not keep those documented.
+// and getting data from them. Due to often changes we do not keep these documented.
 //
 // ------------------------------------------------------------------------------------------------------------
 
@@ -1887,23 +1952,38 @@ class EssentialsHook {
 	}
 
 	private User getUser(final String name) {
+		User user = null;
+
+		try {
+			user = this.ess.getUser(name);
+		} catch (final Throwable t) {
+		}
+
+		if (user != null)
+			return user;
+
 		if (this.ess.getUserMap() == null)
 			return null;
-
-		User user = null;
 
 		try {
 			user = this.ess.getUserMap().getUser(name);
 		} catch (final Throwable t) {
 		}
 
-		if (user == null)
-			try {
-				user = this.ess.getUserMap().getUserFromBukkit(name);
+		if (user != null)
+			return user;
 
-			} catch (final Throwable ex) {
+		try {
+			Method getUserFromBukkit = ReflectionUtil.getMethod(this.ess.getUserMap().getClass(), "getUserFromBukkit", String.class);
+
+			if (getUserFromBukkit == null)
 				user = this.ess.getUser(name);
-			}
+			else
+				user = ReflectionUtil.invoke(getUserFromBukkit, this.ess.getUserMap(), name);
+
+		} catch (final Throwable ex) {
+		}
+
 		return user;
 	}
 
@@ -2192,6 +2272,24 @@ class VaultHook {
 	// Permissions
 	// ------------------------------------------------------------------------------
 
+	@Nullable
+	Boolean hasPerm(final CommandSender sender, final String permission) {
+		if (this.permissions == null)
+			return null;
+
+		try {
+			return this.permissions.playerHas((World) null, sender.getName(), permission);
+
+		} catch (final Throwable t) {
+			Common.logTimed(900,
+					"SEVERE: Unable to ask Vault plugin if " + sender.getName() + " has '" + permission + "' permission, returning false. "
+							+ "This error only shows every 15 minutes. "
+							+ "Run /vault-info and check if your permissions plugin is running correctly.");
+
+			return false;
+		}
+	}
+
 	Boolean hasPerm(@NonNull final OfflinePlayer player, final String perm) {
 		try {
 			return this.permissions != null ? perm != null ? this.permissions.playerHas((String) null, player, perm) : true : null;
@@ -2210,7 +2308,7 @@ class VaultHook {
 		try {
 			return this.permissions != null ? perm != null ? this.permissions.has((String) null, player, perm) : true : null;
 		} catch (final UnsupportedOperationException t) {
-			return false; // No supported plugin installed
+			return false; // No supported plugin installed.
 		}
 	}
 
@@ -2218,7 +2316,7 @@ class VaultHook {
 		try {
 			return this.permissions != null ? perm != null ? this.permissions.has(world, player, perm) : true : null;
 		} catch (final UnsupportedOperationException t) {
-			return false; // No supported plugin installed
+			return false; // No supported plugin installed.
 		}
 	}
 
@@ -2227,7 +2325,7 @@ class VaultHook {
 			return this.permissions != null ? this.permissions.getPrimaryGroup(player) : "";
 
 		} catch (final UnsupportedOperationException t) {
-			return ""; // No supported plugin installed
+			return ""; // No supported plugin installed.
 		}
 	}
 
@@ -2239,7 +2337,7 @@ class VaultHook {
 		try {
 			return this.lookupVault(player, VaultPart.PREFIX);
 		} catch (final UnsupportedOperationException t) {
-			return ""; // No supported plugin installed
+			return ""; // No supported plugin installed.
 		}
 	}
 
@@ -2247,7 +2345,7 @@ class VaultHook {
 		try {
 			return this.lookupVault(player, VaultPart.SUFFIX);
 		} catch (final UnsupportedOperationException t) {
-			return ""; // No supported plugin installed
+			return ""; // No supported plugin installed.
 		}
 	}
 
@@ -2255,7 +2353,7 @@ class VaultHook {
 		try {
 			return this.lookupVault(player, VaultPart.GROUP);
 		} catch (final UnsupportedOperationException t) {
-			return ""; // No supported plugin installed
+			return ""; // No supported plugin installed.
 		}
 	}
 
@@ -2315,7 +2413,7 @@ class PlaceholderAPIHook {
 				injector.unregister();
 
 			} catch (final Throwable t) {
-				// Silence, probably plugin got removed in the meantime
+				// Silence, the plugin probably got removed in the meantime.
 			}
 	}
 
@@ -2391,11 +2489,11 @@ class PlaceholderAPIHook {
 							"Replacing PlaceholderAPI variable took over " + (main ? "1.5" : "4") + " sec",
 							"and was interrupted to prevent hanging the server.",
 							"",
-							"This is typically caused when a variable sends",
+							"This is typically caused when a variable sends a",
 							"blocking HTTP request, such as checking stuff on",
 							"the Internet or resolving offline player names.",
-							"This is NOT error in " + SimplePlugin.getNamed() + ", you need",
-							"to contact placeholder expansion author instead.",
+							"This is NOT an error in " + SimplePlugin.getNamed() + ", you need",
+							"to contact the placeholder expansion's author instead.",
 							"",
 							"Variable: " + finalFormat,
 							"Text: " + oldText,
@@ -2406,7 +2504,7 @@ class PlaceholderAPIHook {
 
 				String value = hooks.get(identifier).onRequest(player, params);
 
-				// Indicate we no longer have to kill the thread
+				// Indicate we no longer have to kill the thread.
 				watchDog.cancel();
 
 				if (value != null) {
@@ -2478,10 +2576,10 @@ class PlaceholderAPIHook {
 
 		/**
 		 * Because this is an internal class,
-		 * you must override this method to let PlaceholderAPI know to not unregister your expansion class when
-		 * PlaceholderAPI is reloaded
+		 * you must override this method to let PlaceholderAPI know to not
+		 * unregister your expansion class when PlaceholderAPI is reloaded.
 		 *
-		 * @return true to persist through reloads
+		 * @return true to persist through reloads.
 		 */
 		@Override
 		public boolean persist() {
@@ -2489,10 +2587,10 @@ class PlaceholderAPIHook {
 		}
 
 		/**
-		 * Because this is a internal class, this check is not needed
-		 * and we can simply return {@code true}
+		 * Because this is an internal class, this check is not needed
+		 * and we can simply return true.
 		 *
-		 * @return Always true since it's an internal class.
+		 * @return always true since it's an internal class.
 		 */
 		@Override
 		public boolean canRegister() {
@@ -2501,9 +2599,9 @@ class PlaceholderAPIHook {
 
 		/**
 		 * The name of the person who created this expansion should go here.
-		 * <br>For convienience do we return the author from the plugin.yml
+		 * <br>For convienience we return the author from the plugin.yml.
 		 *
-		 * @return The name of the author as a String.
+		 * @return the name of the author as a String.
 		 */
 		@Override
 		public String getAuthor() {
@@ -2515,9 +2613,9 @@ class PlaceholderAPIHook {
 		 * <br>This is what tells PlaceholderAPI to call our onRequest
 		 * method to obtain a value if a placeholder starts with our
 		 * identifier.
-		 * <br>This must be unique and can not contain % or _
+		 * <br>This must be unique and cannot contain % or _.
 		 *
-		 * @return The identifier in {@code %<identifier>_<value>%} as String.
+		 * @return The identifier in {@code %<identifier>_<value>%} as a String.
 		 */
 		@Override
 		public String getIdentifier() {
@@ -2528,9 +2626,9 @@ class PlaceholderAPIHook {
 		 * This is the version of the expansion.
 		 * <br>You don't have to use numbers, since it is set as a String.
 		 * <p>
-		 * For convenience do we return the version from the plugin.yml
+		 * For convenience we return the version from the plugin.yml.
 		 *
-		 * @return The version as a String.
+		 * @return the version as a String.
 		 */
 		@Override
 		public String getVersion() {
@@ -2538,9 +2636,11 @@ class PlaceholderAPIHook {
 		}
 
 		/**
-		 * Replace Foundation variables but with our plugin name added as prefix
+		 * Replace Foundation variables but with our plugin name added as a
+		 * prefix.
 		 *
-		 * We return null if an invalid placeholder (f.e. %ourplugin_nonexistingplaceholder%) is provided
+		 * We return null if an invalid placeholder (i.e. %ourplugin_nonexistingplaceholder%)
+		 * is provided.
 		 */
 		@Override
 		public String onRequest(OfflinePlayer offlinePlayer, @NonNull String identifier) {
@@ -2635,10 +2735,10 @@ class MVdWPlaceholderHook {
 
 		} catch (final Throwable t) {
 			Common.error(t,
-					"MvdWPlaceholders placeholders failed!",
+					"MvdWPlaceholderAPI placeholders failed!",
 					"Player: " + player.getName(),
 					"Message: '" + message + "'",
-					"Consider writing to developer of that library",
+					"Consider writing to the developer of that library",
 					"first as this may be a bug we cannot handle!",
 					"",
 					"Your chat message will appear without replacements.");
@@ -2797,7 +2897,7 @@ class WorldGuardHook {
 				} catch (final Throwable t) {
 					t.printStackTrace();
 
-					throw new FoException("Failed WorldEdit 6 legacy hook, see above & report");
+					throw new FoException("Failed WorldEdit 6 legacy hook, see above and report");
 				}
 			else
 				for (final ProtectedRegion reg : ((com.sk89q.worldguard.protection.managers.RegionManager) rm).getRegions().values())
@@ -2841,7 +2941,7 @@ class WorldGuardHook {
 				} catch (final Throwable t) {
 					t.printStackTrace();
 
-					throw new FoException("Failed WorldEdit 6 legacy hook, see above & report");
+					throw new FoException("Failed WorldEdit 6 legacy hook, see above and report");
 				}
 			else
 				((com.sk89q.worldguard.protection.managers.RegionManager) rm)
@@ -2869,7 +2969,7 @@ class WorldGuardHook {
 			} catch (final Throwable t) {
 				t.printStackTrace();
 
-				throw new FoException("Failed WorldEdit 6 legacy hook, see above & report");
+				throw new FoException("Failed WorldEdit 6 legacy hook, see above and report");
 			}
 
 		return ((com.sk89q.worldguard.protection.managers.RegionManager) rm)
@@ -2884,12 +2984,12 @@ class WorldGuardHook {
 			} catch (final Throwable t) {
 				t.printStackTrace();
 
-				throw new FoException("Failed WorldGuard 6 legacy hook, see above & report");
+				throw new FoException("Failed WorldGuard 6 legacy hook, see above and report");
 			}
 
-		// causes class errors..
+		// Causes class errors.
 		//return com.sk89q.worldguard.WorldGuard.getInstance().getPlatform().getRegionContainer().get(new com.sk89q.worldedit.bukkit.BukkitWorld(w));
-		// dynamically load modern WE
+		// Dynamically load modern WorldEdit.
 		try {
 
 			final Class<?> bwClass = Class.forName("com.sk89q.worldedit.bukkit.BukkitWorld");
@@ -2903,7 +3003,7 @@ class WorldGuardHook {
 		} catch (final Throwable t) {
 			t.printStackTrace();
 
-			throw new FoException("Failed WorldGuard hook, see above & report");
+			throw new FoException("Failed WorldGuard hook, see above and report");
 		}
 	}
 }
@@ -2911,27 +3011,27 @@ class WorldGuardHook {
 abstract class FactionsHook {
 
 	/**
-	 * Get all loaded factions
+	 * Get all loaded factions.
 	 */
 	abstract Collection<String> getFactions();
 
 	/**
-	 * Get faction of the player
+	 * Get the faction of the player.
 	 */
 	abstract String getFaction(Player pl);
 
 	/**
-	 * Get faction in the location
+	 * Get the faction at the given location
 	 */
 	abstract String getFaction(Location loc);
 
 	/**
-	 * Get faction owner at the specific location
+	 * Get the faction owner at the given location.
 	 */
 	abstract String getFactionOwner(Location loc);
 
 	/**
-	 * Get all players being in the same faction, used for party chat.
+	 * Get all players in the same faction, used for party chat.
 	 */
 	final Collection<? extends Player> getSameFactionPlayers(final Player pl) {
 		final List<Player> recipients = new ArrayList<>();
@@ -3099,8 +3199,8 @@ class McMMOHook {
 
 		} catch (final Throwable throwable) {
 			if (!this.errorLogged) {
-				Common.warning("Failed getting mcMMO party chat for " + player.getName() + " due to error. Returning null."
-						+ " Ensure you have the latest mcMMO version, if so, contact plugin authors to update the integration. Error was: " + throwable);
+				Common.warning("Failed getting mcMMO party chat for " + player.getName() + " due to an error. Returning null."
+						+ " Ensure you have the latest mcMMO version. If so, contact the plugin authors to update the integration. Error was: " + throwable);
 
 				this.errorLogged = true;
 			}
@@ -3122,8 +3222,8 @@ class McMMOHook {
 
 		} catch (final Throwable throwable) {
 			if (!this.errorLogged) {
-				Common.warning("Failed getting mcMMO party recipients for " + bukkitPlayer.getName() + " due to error. Returning null."
-						+ " Ensure you have the latest mcMMO version, if so, contact plugin authors to update the integration. Error was: " + throwable);
+				Common.warning("Failed getting mcMMO party recipients for " + bukkitPlayer.getName() + " due to an error. Returning null."
+						+ " Ensure you have the latest mcMMO version. If so, contact the plugin authors to update the integration. Error was: " + throwable);
 
 				this.errorLogged = true;
 			}
@@ -3241,7 +3341,7 @@ class CMIHook {
 		try {
 			user.getClass().getMethod("setLastTeleportLocation", Location.class).invoke(user, location);
 		} catch (final Throwable t) {
-			// Silently fail
+			// Silently fail.
 		}
 	}
 
@@ -3249,7 +3349,7 @@ class CMIHook {
 		final CMIUser user = CMI.getInstance().getPlayerManager().getUser(player);
 
 		if (ignore)
-			user.addIgnore(who, true /* save now */);
+			user.addIgnore(who, true /* Save now. */);
 		else
 			user.removeIgnore(who);
 	}
@@ -3350,7 +3450,8 @@ class DiscordSRVHook {
 	boolean sendMessage(@Nullable CommandSender sender, final String channel, final String message) {
 		final TextChannel textChannel = DiscordSRV.getPlugin().getDestinationTextChannelForGameChannelName(channel);
 
-		// Channel not configured in DiscordSRV config.yml, ignore
+		// The channel is not configured in the config.yml of Discord,
+		// so we can ignore it.
 		if (textChannel == null) {
 			Debugger.debug("discord", "[MC->Discord] Could not find Discord channel '" + channel + "'. Available: " + String.join(", ", this.getChannels()) + ". Not sending: " + message);
 
@@ -3362,7 +3463,8 @@ class DiscordSRVHook {
 
 			final DiscordSRV instance = JavaPlugin.getPlugin(DiscordSRV.class);
 
-			// Dirty: We have to temporarily set a config value in DiscordSRV to enable the processChatMessage method to function
+			// Dirty: We have to temporarily set a configuration value in
+			// DiscordSRV to enable the processChatMessage method to function.
 			final String key = "DiscordChatChannelMinecraftToDiscord";
 			final Map<String, Object> runtimeValues = ReflectionUtil.getFieldContent(DiscordSRV.config(), "runtimeValues");
 			final Object oldValue = runtimeValues.get(key);
@@ -3392,7 +3494,7 @@ class DiscordSRVHook {
 class BanManagerHook {
 
 	/*
-	 * Return true if the given player is muted
+	 * Return true if the given player is muted.
 	 */
 	boolean isMuted(final Player player) {
 		try {
@@ -3491,7 +3593,7 @@ class BossHook {
 			}
 
 		} catch (final Throwable t) {
-			Common.log("Unable to check if " + entity + " is a BOSS. Is the API hook outdated? Got: " + t);
+			Common.log("Unable to check if " + entity + " is a Boss. Is the API hook outdated? Got: " + t);
 		}
 
 		return null;
@@ -3518,8 +3620,8 @@ class MythicMobsHook {
 	}
 
 	/*
-	 * Attempt to return a MythicMob name from the given entity
-	 * or null if the entity is not a MythicMob
+	 * Attempt to return a MythicMob name from the given entity,
+	 * or null if the entity is not a MythicMob.
 	 */
 	String getBossName(Entity entity) {
 		if (this.legacyVersion == null)
@@ -3528,7 +3630,7 @@ class MythicMobsHook {
 		if (this.legacyVersion)
 			return this.getBossNameV4(entity);
 
-		return this.getBossNameV5(entity);
+		return this.getBossNameV5Direct(entity);
 	}
 
 	private String getBossNameV4(Entity entity) {
@@ -3549,23 +3651,37 @@ class MythicMobsHook {
 		} catch (final NoSuchElementException ex) {
 		}
 
-		return null;
+		return Remain.getName(entity);
 	}
 
-	private String getBossNameV5(Entity entity) {
+	private String getBossNameV5Direct(Entity entity) {
+		UUID ourUniqueId = entity.getUniqueId();
+		MobManager mobManager = MythicProvider.get().getMobManager();
 
-		final Object mythicPlugin = ReflectionUtil.invokeStatic(ReflectionUtil.lookupClass("io.lumine.mythic.api.MythicProvider"), "get");
-		final Object mobManager = ReflectionUtil.invoke("getMobManager", mythicPlugin);
-		final Collection<?> activeMobs = ReflectionUtil.invoke("getActiveMobs", mobManager);
-
-		for (final Object mob : activeMobs) {
-			final UUID uniqueId = ReflectionUtil.invoke("getUniqueId", mob);
-
-			if (uniqueId.equals(entity.getUniqueId()))
-				return ReflectionUtil.invoke("getName", mob);
+		for (ActiveMob mob : mobManager.getActiveMobs()) {
+			if (ourUniqueId.equals(mob.getUniqueId()))
+				return mob.getName();
 		}
 
-		return null;
+		/*try {
+			final Object mythicPlugin = ReflectionUtil.invokeStatic(ReflectionUtil.lookupClass("io.lumine.mythic.api.MythicProvider"), "get");
+			final Object mobManager = ReflectionUtil.invoke("getMobManager", mythicPlugin);
+		
+			final Method getActiveMobsMethod = ReflectionUtil.getMethod(mobManager.getClass(), "getActiveMobs");
+			final Collection<?> activeMobs = ReflectionUtil.invoke(getActiveMobsMethod, mobManager);
+		
+			for (final Object mob : activeMobs) {
+				final UUID uniqueId = ReflectionUtil.invoke("getUniqueId", mob);
+		
+				if (uniqueId.equals(entity.getUniqueId()))
+					return ReflectionUtil.invoke("getName", mob);
+			}
+		
+		} catch (Throwable t) {
+			Common.error(t, "MythicMobs integration failed getting mob name, contact plugin developer to update the integration!");
+		}*/
+
+		return Remain.getName(entity);
 	}
 }
 
@@ -3595,23 +3711,23 @@ class LandsHook {
 class LiteBansHook {
 
 	/*
-	 * Return true if the given player is muted
+	 * Return true if the given player is muted.
 	 */
 	boolean isMuted(final Player player) {
-		return false; // Problematic, we're investigating this
+		return false; // Problematic, we're investigating this.
 		/*try {
 			final Class<?> api = ReflectionUtil.lookupClass("litebans.api.Database");
 			final Object instance = ReflectionUtil.invokeStatic(api, "get");
-
+		
 			return ReflectionUtil.invoke("isPlayerMuted", instance, player.getUniqueId());
-
+		
 		} catch (final Throwable t) {
 			if (!t.toString().contains("Could not find class")) {
 				Common.log("Unable to check if " + player.getName() + " is muted at LiteBans. Is the API hook outdated? See console error:");
-
+		
 				t.printStackTrace();
 			}
-
+		
 			return false;
 		}*/
 	}
@@ -3630,7 +3746,7 @@ class ItemsAdderHook {
 	}
 
 	/*
-	 * Return true if the given player is muted
+	 * Return true if the given player is muted.
 	 */
 	String replaceFontImages(@Nullable final Player player, final String message) {
 		if (player == null)
