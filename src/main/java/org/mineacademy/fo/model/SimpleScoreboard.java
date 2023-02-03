@@ -429,7 +429,7 @@ public class SimpleScoreboard {
 	 * @param player
 	 */
 	private void reloadEntries(Player player) throws IllegalArgumentException {
-		final String colorizedTitle = Common.colorize(this.title);
+		final String colorizedTitle = this.replaceVariables(player, Common.colorize(this.title));
 		final Scoreboard scoreboard = player.getScoreboard();
 		final List<String> rowsDone = new ArrayList<>();
 		Objective mainboard = scoreboard.getObjective("mainboard");
