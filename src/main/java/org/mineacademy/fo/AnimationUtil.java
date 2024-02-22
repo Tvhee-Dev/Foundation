@@ -11,8 +11,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.mineacademy.fo.model.SimpleRunnable;
 import org.mineacademy.fo.model.SimpleScoreboard;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompBarColor;
@@ -224,7 +224,7 @@ public class AnimationUtil {
 	 * @return The repeating BukkitTask (Useful to cancel on reload or shutdown).
 	 */
 	public static BukkitTask animateBossBar(Player player, List<String> animatedFrames, long delay, long period) {
-		return new BukkitRunnable() {
+		return new SimpleRunnable() {
 			int frame = 0;
 
 			@Override
@@ -259,7 +259,7 @@ public class AnimationUtil {
 
 		final int finalSmoothnessLevel = smoothnessLevel;
 
-		return new BukkitRunnable() {
+		return new SimpleRunnable() {
 			boolean run = true;
 			int frame = 0;
 			float health = 1F;
@@ -310,7 +310,7 @@ public class AnimationUtil {
 	 */
 
 	public static BukkitTask animateScoreboardTitle(SimpleScoreboard scoreboard, List<String> animatedFrames, long delay, long period) {
-		return new BukkitRunnable() {
+		return new SimpleRunnable() {
 			int frame = 0;
 
 			@Override
@@ -334,7 +334,7 @@ public class AnimationUtil {
 	 * @return the task you can cancel after animation ended
 	 */
 	public static BukkitTask animateTitle(Player who, @Nullable List<String> titleFrames, @Nullable List<String> subtitleFrames, long period) {
-		return new BukkitRunnable() {
+		return new SimpleRunnable() {
 			int frame = 0;
 			String title = "", subtitle = "";
 
@@ -366,11 +366,18 @@ public class AnimationUtil {
 	 * @return The repeating BukkitTask (Useful to cancel on reload or shutdown).
 	 */
 	public static BukkitTask animateItemTitle(ItemStack item, List<String> animatedFrames, long delay, long period) {
-		return new BukkitRunnable() {
+		return new SimpleRunnable() {
 			int frame = 0;
 
 			@Override
 			public void run() {
+
+				if (!Remain.hasItemMeta()) {
+					this.cancel();
+
+					return;
+				}
+
 				final ItemMeta meta = checkMeta(item);
 
 				meta.setDisplayName(animatedFrames.get(this.frame));
@@ -394,11 +401,19 @@ public class AnimationUtil {
 	 *                                   ({@code line < 0 || line > lore.size()})
 	 */
 	public static BukkitTask animateItemLore(ItemStack item, int line, List<String> animatedFrames, long delay, long period) {
-		return new BukkitRunnable() {
+
+		return new SimpleRunnable() {
 			int frame = 0;
 
 			@Override
 			public void run() {
+
+				if (!Remain.hasItemMeta()) {
+					this.cancel();
+
+					return;
+				}
+
 				final String frameText = animatedFrames.get(this.frame % animatedFrames.size());
 				final ItemMeta meta = checkMeta(item);
 				List<String> lore = meta.getLore();
@@ -430,7 +445,7 @@ public class AnimationUtil {
 	 * @return The repeating BukkitTask (Useful to cancel on reload or shutdown).
 	 */
 	public static BukkitTask animateInventoryTitle(Player viewer, List<String> animatedFrames, long delay, long period) {
-		return new BukkitRunnable() {
+		return new SimpleRunnable() {
 			int frame = 0;
 
 			@Override

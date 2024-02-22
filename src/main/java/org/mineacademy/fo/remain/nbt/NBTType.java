@@ -15,10 +15,11 @@ public enum NBTType {
 	NBTTagFloat(5),
 	NBTTagDouble(6),
 	NBTTagByteArray(7),
-	NBTTagIntArray(11),
 	NBTTagString(8),
 	NBTTagList(9),
-	NBTTagCompound(10);
+	NBTTagCompound(10),
+	NBTTagIntArray(11),
+	NBTTagLongArray(12);
 
 	NBTType(int i) {
 		id = i;
@@ -38,7 +39,7 @@ public enum NBTType {
 	 * @return Enum representing the id, NBTTagEnd for invalide ids
 	 */
 	public static NBTType valueOf(int id) {
-		for (NBTType t : values())
+		for (final NBTType t : values())
 			if (t.getId() == id)
 				return t;
 		return NBTType.NBTTagEnd;

@@ -298,13 +298,32 @@ public abstract class MenuPagged<T> extends Menu {
 
 	// Render the next/prev buttons
 	private void setButtons() {
-		final boolean hasPages = this.pages.size() > 1;
 
 		// Set previous button
-		this.prevButton = hasPages ? this.formPreviousButton() : Button.makeEmpty();
+		this.prevButton = this.canShowPreviousButton() ? this.formPreviousButton() : Button.makeEmpty();
 
 		// Set next page button
-		this.nextButton = hasPages ? this.formNextButton() : Button.makeEmpty();
+		this.nextButton = this.canShowNextButton() ? this.formNextButton() : Button.makeEmpty();
+	}
+
+	/**
+	 * By default this returns true if there is at least 2 pages,
+	 * override for custom functionality.
+	 *
+	 * @return
+	 */
+	protected boolean canShowPreviousButton() {
+		return this.pages.size() > 1;
+	}
+
+	/**
+	 * By default this returns true if there is at least 2 pages,
+	 * override for custom functionality.
+	 *
+	 * @return
+	 */
+	protected boolean canShowNextButton() {
+		return this.pages.size() > 1;
 	}
 
 	/**
@@ -404,7 +423,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param
 	 */
 	@Override
-	protected final void onDisplay(final InventoryDrawer drawer) {
+	protected final void onPreDisplay(final InventoryDrawer drawer) {
 		drawer.setTitle(this.getTitleWithPageNumbers());
 
 		this.onPostDisplay(drawer);
@@ -414,7 +433,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * Reload pages when the menu is restarted
 	 */
 	@Override
-	void onRestart() {
+	final void onRestartInternal() {
 		this.calculatePages();
 	}
 

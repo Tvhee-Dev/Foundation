@@ -26,10 +26,12 @@ class MojangToMapping {
 			put("net.minecraft.nbt.CompoundTag#getIntArray(java.lang.String)", "n");
 			put("net.minecraft.nbt.CompoundTag#remove(java.lang.String)", "r");
 			put("net.minecraft.nbt.CompoundTag#get(java.lang.String)", "c");
-			put("net.minecraft.nbt.CompoundTag#put(java.lang.String,net.minecraft.nbt.Tag)", "a");
+			put("net.minecraft.nbt.CompoundTag#merge(net.minecraft.nbt.CompoundTag)", "a");
 			put("net.minecraft.nbt.CompoundTag#putBoolean(java.lang.String,boolean)", "a");
 			put("net.minecraft.nbt.CompoundTag#getTagType(java.lang.String)", "d");
 			put("net.minecraft.nbt.CompoundTag#putLong(java.lang.String,long)", "a");
+			put("net.minecraft.nbt.CompoundTag#putLongArray(java.lang.String,long[])", "a");
+			put("net.minecraft.nbt.CompoundTag#getLongArray(java.lang.String)", "o");
 			put("net.minecraft.nbt.CompoundTag#getString(java.lang.String)", "l");
 			put("net.minecraft.nbt.CompoundTag#getInt(java.lang.String)", "h");
 			put("net.minecraft.nbt.CompoundTag#putString(java.lang.String,java.lang.String)", "a");
@@ -38,7 +40,6 @@ class MojangToMapping {
 			put("net.minecraft.nbt.CompoundTag#putIntArray(java.lang.String,int[])", "a");
 			put("net.minecraft.nbt.CompoundTag#getShort(java.lang.String)", "g");
 			put("net.minecraft.nbt.CompoundTag#putByte(java.lang.String,byte)", "a");
-			put("net.minecraft.nbt.CompoundTag#getAllKeys()", "d");
 			put("net.minecraft.nbt.CompoundTag#getAllKeys()", "d");
 			put("net.minecraft.nbt.CompoundTag#putUUID(java.lang.String,java.util.UUID)", "a");
 			put("net.minecraft.nbt.CompoundTag#putShort(java.lang.String,short)", "a");
@@ -69,7 +70,7 @@ class MojangToMapping {
 			put("net.minecraft.world.level.block.entity.BlockEntity#saveWithId()", "n");
 			put("net.minecraft.world.level.block.entity.BlockEntity#getBlockState()", "q");
 			put("net.minecraft.world.level.block.entity.BlockEntity#load(net.minecraft.nbt.CompoundTag)", "a");
-			put("net.minecraft.server.level.ServerLevel#getBlockEntity(net.minecraft.core.BlockPos)", "c_");
+			put("net.minecraft.server.level.ServerLevel#getBlockState(net.minecraft.core.BlockPos)", "c_");
 		}
 
 	};
@@ -106,8 +107,54 @@ class MojangToMapping {
 
 	};
 
+	@SuppressWarnings("serial")
+	private static Map<String, String> MC1_20R1 = new HashMap<String, String>() {
+
+		{
+			putAll(MC1_19R2);
+
+			put("net.minecraft.world.entity.Entity#getEncodeId()", "br");
+			put("net.minecraft.world.item.ItemStack#getTag()", "v");
+		}
+
+	};
+
+	@SuppressWarnings("serial")
+	private static Map<String, String> MC1_20R2 = new HashMap<String, String>() {
+
+		{
+			putAll(MC1_20R1);
+
+			put("net.minecraft.world.entity.Entity#getEncodeId()", "bu");
+		}
+
+	};
+
+	@SuppressWarnings("serial")
+	private static Map<String, String> MC1_20R3 = new HashMap<String, String>() {
+
+		{
+			putAll(MC1_20R2);
+
+			put("net.minecraft.nbt.NbtIo#readCompressed(java.io.InputStream,net.minecraft.nbt.NbtAccounter)", "a");
+			put("net.minecraft.nbt.NbtAccounter#unlimitedHeap()", "a");
+			put("net.minecraft.world.entity.Entity#getEncodeId()", "bw");
+			put("net.minecraft.world.level.block.entity.BlockEntity#saveWithId()", "p");
+			put("net.minecraft.world.level.block.entity.BlockEntity#getBlockState()", "r");
+		}
+
+	};
+
 	public static Map<String, String> getMapping() {
 		switch (MinecraftVersion.getVersion()) {
+			case MC1_20_R3:
+				return MC1_20R3;
+			case MC1_20_R2:
+				return MC1_20R2;
+			case MC1_20_R1:
+				return MC1_20R1;
+			case MC1_19_R3:
+				return MC1_19R2;
 			case MC1_19_R2:
 				return MC1_19R2;
 			case MC1_19_R1:
@@ -116,9 +163,11 @@ class MojangToMapping {
 				return MC1_18R2;
 			case MC1_18_R1:
 				return MC1_18R1;
+			case UNKNOWN:
+				return MC1_20R2; // assume it's a future version, so try the latest known mappings
 			default:
-				return MC1_19R2;// throw new NbtApiException("This version of the NBTAPI is not compatible with
-								// this server version!");
+				// this should never happen, unless a version is forgotten here(like 1.19R3 which uses the 1.19R2 mappings)
+				throw new NbtApiException("No fitting mapping found for version " + MinecraftVersion.getVersion() + ". This is a bug!");
 		}
 	}
 

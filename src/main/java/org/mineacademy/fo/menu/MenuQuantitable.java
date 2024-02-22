@@ -61,7 +61,7 @@ public interface MenuQuantitable {
 
 	/**
 	 * @deprecated rounds the amount number, you need to decide if you will support
-	 * decimal quantities and use either {@link #getAmountDouble()} or if not, use {@link #getAmountPercent()}
+	 * decimal quantities and use either {@link #getNextQuantityDouble(ClickType)} or if not, use {@link #getNextQuantityPercent(ClickType)}
 	 *
 	 * @param clickType
 	 * @return
@@ -184,7 +184,7 @@ public interface MenuQuantitable {
 
 				// Lore
 				"",
-				"&7" + this.getLevelLoreLabel() + ": &6{level}",
+				this.getLevelLoreLabel() + ": &6{level}",
 				"",
 				"   &8(Mouse click)",
 				"  &7&l< &4-{quantity}    &2+{quantity} &7&l>"),

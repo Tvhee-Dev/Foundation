@@ -122,7 +122,7 @@ public final class ChatUtil {
 		double compensated = 0;
 
 		while (compensated < toCompensate) {
-			builder.append(" ");
+			builder.append(space);
 
 			compensated += spaceLength;
 		}
@@ -229,8 +229,8 @@ public final class ChatUtil {
 	 * @param message  the String to capitalize, may be null
 	 * @return capitalized String, <code>null</code> if null String input
 	 */
-	public static String capitalizeFully(String str) {
-		return capitalizeFully(str, (char[]) null);
+	public static String capitalizeFully(String message) {
+		return capitalizeFully(message, (char[]) null);
 	}
 
 	private static String capitalizeFully(String str, char[] delimiters) {
@@ -265,8 +265,8 @@ public final class ChatUtil {
 	 * @param message  the String to capitalize, may be null
 	 * @return capitalized String, <code>null</code> if null String input
 	 */
-	public static String capitalize(String str) {
-		return capitalize(str, (char[]) null);
+	public static String capitalize(String message) {
+		return capitalize(message, (char[]) null);
 	}
 
 	private static String capitalize(String str, char[] delimiters) {
@@ -537,21 +537,42 @@ public final class ChatUtil {
 	 * Automatically add gradient for the given string using the two colors as start/ending colors
 	 *
 	 * @param message
-	 * @param from
-	 * @param to
+	 * @param fromColor
+	 * @param toColor the color, such as #FF1122 or &c or red
 	 * @return
 	 */
-	public static String generateGradient(String message, CompChatColor from, CompChatColor to) {
+	public static String generateGradient(String message, String fromColor, String toColor) {
+		return generateGradient(message, CompChatColor.of(fromColor), CompChatColor.of(toColor));
+	}
+
+	/**
+	 * Automatically add gradient for the given string using the two colors as start/ending colors
+	 *
+	 * @param message
+	 * @param fromColor
+	 * @param toColor
+	 * @return
+	 */
+	public static String generateGradient(String message, CompChatColor fromColor, CompChatColor toColor) {
+		return generateGradient(message, fromColor.getColor(), toColor.getColor());
+	}
+
+	/**
+	 * Automatically add gradient for the given string using the two colors as start/ending colors
+	 *
+	 * @param message
+	 * @param fromColor
+	 * @param toColor
+	 * @return
+	 */
+	public static String generateGradient(String message, Color fromColor, Color toColor) {
 		if (!MinecraftVersion.atLeast(V.v1_16))
 			return message;
-
-		final Color color1 = from.getColor();
-		final Color color2 = to.getColor();
 
 		final char[] letters = message.toCharArray();
 		String gradient = "";
 
-		ChatColor lastDecoration = null;
+		final List<String> decorations = new ArrayList<>();
 
 		for (int i = 0; i < letters.length; i++) {
 			final char letter = letters[i];
@@ -561,22 +582,22 @@ public final class ChatUtil {
 				final char decoration = letters[i + 1];
 
 				if (decoration == 'k')
-					lastDecoration = ChatColor.MAGIC;
+					decorations.add(ChatColor.MAGIC.toString());
 
 				else if (decoration == 'l')
-					lastDecoration = ChatColor.BOLD;
+					decorations.add(ChatColor.BOLD.toString());
 
 				else if (decoration == 'm')
-					lastDecoration = ChatColor.STRIKETHROUGH;
+					decorations.add(ChatColor.STRIKETHROUGH.toString());
 
 				else if (decoration == 'n')
-					lastDecoration = ChatColor.UNDERLINE;
+					decorations.add(ChatColor.UNDERLINE.toString());
 
 				else if (decoration == 'o')
-					lastDecoration = ChatColor.ITALIC;
+					decorations.add(ChatColor.ITALIC.toString());
 
 				else if (decoration == 'r')
-					lastDecoration = null;
+					decorations.add(ChatColor.RESET.toString());
 
 				i++;
 				continue;
@@ -584,13 +605,13 @@ public final class ChatUtil {
 
 			final float ratio = (float) i / (float) letters.length;
 
-			final int red = (int) (color2.getRed() * ratio + color1.getRed() * (1 - ratio));
-			final int green = (int) (color2.getGreen() * ratio + color1.getGreen() * (1 - ratio));
-			final int blue = (int) (color2.getBlue() * ratio + color1.getBlue() * (1 - ratio));
+			final int red = (int) (toColor.getRed() * ratio + fromColor.getRed() * (1 - ratio));
+			final int green = (int) (toColor.getGreen() * ratio + fromColor.getGreen() * (1 - ratio));
+			final int blue = (int) (toColor.getBlue() * ratio + fromColor.getBlue() * (1 - ratio));
 
 			final Color stepColor = new Color(red, green, blue);
 
-			gradient += CompChatColor.of(stepColor).toString() + (lastDecoration == null ? "" : lastDecoration.toString()) + letters[i];
+			gradient += CompChatColor.of(stepColor) + String.join("", decorations) + letters[i];
 		}
 
 		return gradient;

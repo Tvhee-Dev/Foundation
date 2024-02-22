@@ -51,6 +51,7 @@ import com.bekvon.bukkit.residence.Residence;
 import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.earth2me.essentials.CommandSource;
@@ -136,6 +137,7 @@ public final class HookManager {
 	private static NickyHook nickyHook;
 	private static PlaceholderAPIHook placeholderAPIHook;
 	private static PlotSquaredHook plotSquaredHook;
+	private static PremiumVanishHook premiumVanishHook;
 	private static ProtocolLibHook protocolLibHook;
 	private static ResidenceHook residenceHook;
 	private static TownyHook townyHook;
@@ -260,23 +262,27 @@ public final class HookManager {
 		if (Common.doesPluginExist("PlotSquared")) {
 			final String ver = Bukkit.getPluginManager().getPlugin("PlotSquared").getDescription().getVersion();
 
-			if (ver.startsWith("6.") || ver.startsWith("5.") || ver.startsWith("3."))
+			if (ver.startsWith("7.") || ver.startsWith("6.") || ver.startsWith("5.") || ver.startsWith("3."))
 				plotSquaredHook = new PlotSquaredHook();
 			else
 				Common.warning("Could not hook into PlotSquared. Version 3.x, 5.x or 6.x required, you have " + ver);
 		}
 
-		if (Common.doesPluginExist("ProtocolLib")) {
-			protocolLibHook = new ProtocolLibHook();
+		if (Common.doesPluginExist("PremiumVanish"))
+			premiumVanishHook = new PremiumVanishHook();
 
+		if (Common.doesPluginExist("ProtocolLib")) {
 			// Also check if the library is loaded properly.
 			try {
+				protocolLibHook = new ProtocolLibHook();
+
 				if (MinecraftVersion.newerThan(V.v1_6))
 					Class.forName("com.comphenix.protocol.wrappers.WrappedChatComponent");
+
 			} catch (final Throwable t) {
 				protocolLibHook = null;
 
-				Common.throwError(t, "You are running an old and unsupported version of ProtocolLib, please update it.");
+				Common.error(t, "You are running an old and unsupported version of ProtocolLib, please update it. The plugin will continue to function without hooking into it.");
 			}
 		}
 
@@ -567,6 +573,15 @@ public final class HookManager {
 	}
 
 	/**
+	 * Is PremiumVanish loaded?
+	 *
+	 * @return
+	 */
+	public static boolean isPremiumVanishLoaded() {
+		return premiumVanishHook != null;
+	}
+
+	/**
 	 * Is ProtocolLib loaded?
 	 * <p>
 	 * This will not only check if the plugin is in the plugins folder, but
@@ -846,8 +861,45 @@ public final class HookManager {
 	}
 
 	/**
-	 * Sets the vanish status for the player in AdvancedVanish, CMI and
-	 * EssentialsX.
+	 * Return true if the given player is vanished in PremiumVanish.
+	 *
+	 * @deprecated this does not a call metadata check for most plugins,
+	 *             nor an NMS check. See {@link PlayerUtil#isVanished(Player)}.
+	 * @param player the player to check.
+	 * @return
+	 */
+	@Deprecated
+	public static boolean isVanishedPremiumVanish(final Player player) {
+		return isPremiumVanishLoaded() && premiumVanishHook.isVanished(player);
+	}
+
+	/**
+	 * Returns if the player is vanished from plugins AdvancedVanish, CMI,
+	 * PremiumVanish and EssentialsX.
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static boolean isVanished(final Player player) {
+
+		if (isVanishedPremiumVanish(player))
+			return true;
+
+		if (isVanishedAdvancedVanish(player))
+			return true;
+
+		if (isVanishedCMI(player))
+			return true;
+
+		if (isVanishedEssentials(player))
+			return true;
+
+		return false;
+	}
+
+	/**
+	 * Sets the vanish status for the player in AdvancedVanish, CMI,
+	 * PremiumVanish and EssentialsX.
 	 *
 	 * @deprecated this does not remove the vanish metadata and NMS
 	 * invisibility. Use {@link PlayerUtil#setVanished(Player, boolean)}
@@ -865,6 +917,9 @@ public final class HookManager {
 
 		if (isAdvancedVanishLoaded())
 			advancedVanishHook.setVanished(player, vanished);
+
+		if (isPremiumVanishLoaded())
+			premiumVanishHook.setVanished(player, vanished);
 	}
 
 	/**
@@ -1349,12 +1404,12 @@ public final class HookManager {
 	 * Returns TRUE or FALSE depending on the result of the Vault check.
 	 * Returns FALSE on exception and fails silently by printing the error to the console.
 	 *
-	 * @param sender
-	 * @param perm
+	 * @param player
+	 * @param permission
 	 * @return
 	 */
-	public static Boolean hasVaultPermissionFast(final CommandSender sender, final String permission) {
-		return vaultHook.hasPerm(sender, permission);
+	public static Boolean hasVaultPermissionFast(final Player player, final String permission) {
+		return vaultHook.hasPerm(player, permission);
 	}
 
 	/**
@@ -1536,6 +1591,19 @@ public final class HookManager {
 		Valid.checkBoolean(isProtocolLibLoaded(), "Cannot add packet listeners if ProtocolLib isn't installed");
 
 		protocolLibHook.addPacketListener(adapter);
+	}
+
+	/**
+	 * Removes a {@link PacketAdapter} packet listener from ProtocolLib.
+	 * <p>
+	 * If the plugin is missing, or the listener hasn't been registered, an error will be thrown
+	 *
+	 * @param adapter the adapter to remove.
+	 */
+	public static void removePacketListener(final Object adapter) {
+		Valid.checkBoolean(isProtocolLibLoaded(), "Cannot remove packet listeners if ProtocolLib isn't installed");
+
+		protocolLibHook.removePacketListener(adapter);
 	}
 
 	/**
@@ -1974,7 +2042,7 @@ class EssentialsHook {
 			return user;
 
 		try {
-			Method getUserFromBukkit = ReflectionUtil.getMethod(this.ess.getUserMap().getClass(), "getUserFromBukkit", String.class);
+			final Method getUserFromBukkit = ReflectionUtil.getMethod(this.ess.getUserMap().getClass(), "getUserFromBukkit", String.class);
 
 			if (getUserFromBukkit == null)
 				user = this.ess.getUser(name);
@@ -2176,6 +2244,22 @@ class ProtocolLibHook {
 		this.registeredListeners.add(listener);
 	}
 
+	final void removePacketListener(final Object listener) {
+		Valid.checkBoolean(listener instanceof PacketListener, "Listener must extend or implements PacketListener or PacketAdapter");
+		Valid.checkBoolean(this.registeredListeners.contains(listener), "Listener must already be registered with ProtocolLib.");
+
+		try {
+			this.manager.removePacketListener((PacketListener) listener);
+
+		} catch (final Throwable t) {
+			Common.error(t, "Failed to unregister ProtocolLib packet listener!");
+
+			return;
+		}
+
+		this.registeredListeners.remove(listener);
+	}
+
 	final void removePacketListeners(final Plugin plugin) {
 		this.manager.removePacketListeners(plugin);
 
@@ -2273,16 +2357,16 @@ class VaultHook {
 	// ------------------------------------------------------------------------------
 
 	@Nullable
-	Boolean hasPerm(final CommandSender sender, final String permission) {
+	Boolean hasPerm(final Player player, final String permission) {
 		if (this.permissions == null)
 			return null;
 
 		try {
-			return this.permissions.playerHas((World) null, sender.getName(), permission);
+			return this.permissions.playerHas((World) null, player.getName(), permission);
 
 		} catch (final Throwable t) {
 			Common.logTimed(900,
-					"SEVERE: Unable to ask Vault plugin if " + sender.getName() + " has '" + permission + "' permission, returning false. "
+					"SEVERE: Unable to ask Vault plugin if " + player.getName() + " has '" + permission + "' permission, returning false. "
 							+ "This error only shows every 15 minutes. "
 							+ "Run /vault-info and check if your permissions plugin is running correctly.");
 
@@ -2449,7 +2533,7 @@ class PlaceholderAPIHook {
 		return text;
 	}
 
-	private String setPlaceholders(OfflinePlayer player, String oldText, String text, Map<String, PlaceholderExpansion> hooks, Matcher matcher) {
+	private String setPlaceholders(@Nullable OfflinePlayer player, String oldText, String text, Map<String, PlaceholderExpansion> hooks, Matcher matcher) {
 		while (matcher.find()) {
 			String format = matcher.group(1);
 			boolean frontSpace = false;
@@ -2745,6 +2829,36 @@ class MVdWPlaceholderHook {
 		}
 
 		return message;
+	}
+}
+
+class PremiumVanishHook {
+
+	private final Method isInvisible;
+	private final Method hidePlayer;
+	private final Method showPlayer;
+
+	public PremiumVanishHook() {
+		final Class<?> clazz = ReflectionUtil.lookupClass("de.myzelyam.api.vanish.VanishAPI");
+
+		this.isInvisible = ReflectionUtil.getMethod(clazz, "isInvisible", Player.class);
+		this.hidePlayer = ReflectionUtil.getMethod(clazz, "hidePlayer", Player.class, boolean.class, boolean.class);
+		this.showPlayer = ReflectionUtil.getMethod(clazz, "showPlayer", Player.class, boolean.class);
+	}
+
+	boolean isVanished(Player player) {
+		return ReflectionUtil.invokeStatic(this.isInvisible, player);
+	}
+
+	void setVanished(Player player, boolean vanished) {
+		if (vanished) {
+			if (!this.isVanished(player))
+				ReflectionUtil.invokeStatic(this.hidePlayer, player, true, false);
+
+		} else {
+			if (this.isVanished(player))
+				ReflectionUtil.invokeStatic(this.showPlayer, player, true);
+		}
 	}
 }
 
@@ -3254,19 +3368,17 @@ class PlotSquaredHook {
 		Method wrap;
 
 		try {
-			wrap = plotPlayerClass.getMethod("wrap", Player.class);
+			wrap = plotPlayerClass.getMethod("from", Object.class);
 
-		} catch (final ReflectiveOperationException ex) {
-
+		} catch (final ReflectiveOperationException ex3) {
 			try {
 				wrap = plotPlayerClass.getMethod("wrap", Object.class);
 
 			} catch (final ReflectiveOperationException ex2) {
-
 				try {
-					wrap = plotPlayerClass.getMethod("from", Object.class);
+					wrap = plotPlayerClass.getMethod("wrap", Player.class);
 
-				} catch (final ReflectiveOperationException ex3) {
+				} catch (final ReflectiveOperationException ex) {
 					throw new FoException(ex3, "PlotSquared could not convert " + player.getName() + " into PlotPlayer! Is the integration outdated?");
 				}
 			}
@@ -3332,7 +3444,19 @@ class CMIHook {
 		final CMIUser user = this.getUser(player);
 
 		if (user != null)
-			user.setGod(godMode);
+			try {
+				CMI.getInstance().getNMS().changeGodMode(player, godMode);
+
+			} catch (final Throwable tt) {
+				try {
+					final Method setGod = CMIUser.class.getMethod("setGod", Boolean.class);
+
+					setGod.invoke(user, godMode);
+
+				} catch (final Throwable t) {
+					// unavailable
+				}
+			}
 	}
 
 	void setLastTeleportLocation(final Player player, final Location location) {
@@ -3418,9 +3542,15 @@ class CMIHook {
 class CitizensHook {
 
 	boolean isNPC(final Entity entity) {
-		final NPCRegistry reg = CitizensAPI.getNPCRegistry();
+		try {
+			final NPCRegistry reg = CitizensAPI.getNPCRegistry();
 
-		return reg != null ? reg.isNPC(entity) : false;
+			return reg != null ? reg.isNPC(entity) : false;
+		} catch (final NoClassDefFoundError err) {
+			Common.logTimed(60 * 30, "Unable to check if " + entity + " is Citizens NPC, got " + err + ". This error only shows once per 30min.");
+
+			return false;
+		}
 	}
 
 	Entity getNPCTarget(Entity entity) {
@@ -3558,14 +3688,14 @@ class BentoBoxHook {
 		} else {
 			final UUID uniqueId = player.getUniqueId();
 
-			for (World world : Bukkit.getWorlds()) {
+			for (final World world : Bukkit.getWorlds()) {
 				try {
-					Island island = manager.getIsland(world, uniqueId);
+					final Island island = manager.getIsland(world, uniqueId);
 
 					if (island != null)
 						return island.getMemberSet(rank);
 
-				} catch (Throwable t) {
+				} catch (final Throwable t) {
 				}
 			}
 		}
@@ -3655,10 +3785,10 @@ class MythicMobsHook {
 	}
 
 	private String getBossNameV5Direct(Entity entity) {
-		UUID ourUniqueId = entity.getUniqueId();
-		MobManager mobManager = MythicProvider.get().getMobManager();
+		final UUID ourUniqueId = entity.getUniqueId();
+		final MobManager mobManager = MythicProvider.get().getMobManager();
 
-		for (ActiveMob mob : mobManager.getActiveMobs()) {
+		for (final ActiveMob mob : mobManager.getActiveMobs()) {
 			if (ourUniqueId.equals(mob.getUniqueId()))
 				return mob.getName();
 		}
@@ -3666,17 +3796,17 @@ class MythicMobsHook {
 		/*try {
 			final Object mythicPlugin = ReflectionUtil.invokeStatic(ReflectionUtil.lookupClass("io.lumine.mythic.api.MythicProvider"), "get");
 			final Object mobManager = ReflectionUtil.invoke("getMobManager", mythicPlugin);
-		
+
 			final Method getActiveMobsMethod = ReflectionUtil.getMethod(mobManager.getClass(), "getActiveMobs");
 			final Collection<?> activeMobs = ReflectionUtil.invoke(getActiveMobsMethod, mobManager);
-		
+
 			for (final Object mob : activeMobs) {
 				final UUID uniqueId = ReflectionUtil.invoke("getUniqueId", mob);
-		
+
 				if (uniqueId.equals(entity.getUniqueId()))
 					return ReflectionUtil.invoke("getName", mob);
 			}
-		
+
 		} catch (Throwable t) {
 			Common.error(t, "MythicMobs integration failed getting mob name, contact plugin developer to update the integration!");
 		}*/
@@ -3687,24 +3817,52 @@ class MythicMobsHook {
 
 class LandsHook {
 
-	private final Object lands;
+	private final Object landsClass;
+	private final Method getArea;
 	private final Method getLand;
+	private final Method getName;
 
 	LandsHook() {
-		final Class<?> landsIntegration = ReflectionUtil.lookupClass("me.angeschossen.lands.api.integration.LandsIntegration");
-		final Constructor<?> con = ReflectionUtil.getConstructor(landsIntegration, Plugin.class);
+		final Class<?> lands = ReflectionUtil.lookupClass("me.angeschossen.lands.api.LandsIntegration");
+		final Class<?> area = ReflectionUtil.lookupClass("me.angeschossen.lands.api.land.Area");
+		final Class<?> land = ReflectionUtil.lookupClass("me.angeschossen.lands.api.land.Land");
 
-		this.lands = ReflectionUtil.instantiate(con, SimplePlugin.getInstance());
-		this.getLand = ReflectionUtil.getMethod(landsIntegration, "getLand", Location.class);
+		final Method of = ReflectionUtil.getMethod(lands, "of", Plugin.class);
+
+		this.landsClass = ReflectionUtil.invokeStatic(of, SimplePlugin.getInstance());
+		this.getArea = ReflectionUtil.getMethod(lands, "getArea", Location.class);
+		this.getLand = ReflectionUtil.getMethod(area, "getLand");
+		this.getName = ReflectionUtil.getMethod(land, "getName");
 	}
 
-	Collection<Player> getLandPlayers(Player player) {
-		final Object land = ReflectionUtil.invoke(this.getLand, this.lands, player.getLocation());
+	Collection<Player> getLandPlayers(Player sender) {
+		final List<Player> playersAtLocation = new ArrayList<>();
 
-		if (land != null)
-			return (Collection<Player>) ReflectionUtil.invoke("getOnlinePlayers", land);
+		final Object senderArea = ReflectionUtil.invoke(this.getArea, this.landsClass, sender.getLocation());
+		final Object senderLand = senderArea != null ? ReflectionUtil.invoke(this.getLand, senderArea) : null;
 
-		return new ArrayList<>();
+		final boolean senderInWilderness = senderLand == null;
+		final String senderLandName = senderInWilderness ? "" : ReflectionUtil.invoke(this.getName, senderLand);
+
+		for (final Player recipient : Remain.getOnlinePlayers()) {
+
+			final Object recipientArea = ReflectionUtil.invoke(this.getArea, this.landsClass, recipient.getLocation());
+			final Object recipientLand = recipientArea != null ? ReflectionUtil.invoke(this.getLand, recipientArea) : null;
+			final boolean recipientInWilderness = recipientLand == null;
+
+			// Both in wilderness
+			if (recipientInWilderness && senderInWilderness)
+				playersAtLocation.add(recipient);
+
+			// Other player in land
+			if (senderLand == null)
+				continue;
+
+			if (recipientLand != null && ReflectionUtil.invoke(this.getName, recipientLand).equals(senderLandName))
+				playersAtLocation.add(recipient);
+		}
+
+		return playersAtLocation;
 	}
 }
 
@@ -3718,16 +3876,16 @@ class LiteBansHook {
 		/*try {
 			final Class<?> api = ReflectionUtil.lookupClass("litebans.api.Database");
 			final Object instance = ReflectionUtil.invokeStatic(api, "get");
-		
+
 			return ReflectionUtil.invoke("isPlayerMuted", instance, player.getUniqueId());
-		
+
 		} catch (final Throwable t) {
 			if (!t.toString().contains("Could not find class")) {
 				Common.log("Unable to check if " + player.getName() + " is muted at LiteBans. Is the API hook outdated? See console error:");
-		
+
 				t.printStackTrace();
 			}
-		
+
 			return false;
 		}*/
 	}

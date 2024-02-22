@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.EnderPearl;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -17,12 +18,12 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.event.RocketExplosionEvent;
+import org.mineacademy.fo.model.SimpleRunnable;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
@@ -210,13 +211,19 @@ public final class ToolsListener implements Listener {
 
 						final Location directedLoc = player.getEyeLocation().add(player.getEyeLocation().getDirection().setY(0).normalize().multiply(1.05)).add(0, 0.2, 0);
 
-						final Projectile copy = world.spawn(directedLoc, shot.getClass());
+						final Projectile copy;
+
+						if (shot instanceof EnderPearl)
+							copy = (Projectile) world.spawnEntity(directedLoc, EntityType.ENDER_PEARL);
+						else
+							copy = world.spawn(directedLoc, shot.getClass());
+
 						copy.setVelocity(shot.getVelocity());
 
 						this.shotRockets.put(copy.getUniqueId(), new ShotRocket(player, rocket));
 						rocket.onLaunch(copy, player);
 
-						Common.runTimer(1, new BukkitRunnable() {
+						Common.runTimer(1, new SimpleRunnable() {
 
 							private long elapsedTicks = 0;
 

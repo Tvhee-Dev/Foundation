@@ -34,6 +34,13 @@ import lombok.Setter;
 public abstract class MenuContainerChances extends Menu implements MenuQuantitable {
 
 	/**
+	 * The filler item we fill the bottom bar with for safety.
+	 */
+	@Getter
+	@Setter
+	private ItemStack bottomBarFillerItem = ItemCreator.of(CompMaterial.LIGHT_GRAY_STAINED_GLASS_PANE, " ").make();
+
+	/**
 	 * Temporary store of the edited drop chances here
 	 */
 	private final StrictMap<Integer, Double> editedDropChances = new StrictMap<>();
@@ -87,14 +94,14 @@ public abstract class MenuContainerChances extends Menu implements MenuQuantitab
 			public void onClickedInMenu(Player player, Menu menu, ClickType click) {
 				final MenuContainerChances instance = MenuContainerChances.this;
 
-				// Call event to properly save data without us having to restart the menu completely
+				// Call event to properly save data early
 				instance.onMenuClose(player, player.getOpenInventory().getTopInventory());
 
 				// Simulate mode chance in the menu
 				instance.mode = MenuContainerChances.this.mode.next();
 				instance.setTitle("&0Editing " + instance.mode.getKey());
 
-				instance.restartMenu();
+				instance.restartMenu(null, false);
 			}
 
 			/**
@@ -157,7 +164,7 @@ public abstract class MenuContainerChances extends Menu implements MenuQuantitab
 		}
 
 		if (slot > this.getSize() - 9)
-			return MenuContainer.BOTTOM_BAR_FILLER_ITEM;
+			return this.bottomBarFillerItem;
 
 		return NO_ITEM;
 	}

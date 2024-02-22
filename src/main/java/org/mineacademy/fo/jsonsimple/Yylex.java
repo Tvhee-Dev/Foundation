@@ -540,7 +540,8 @@ class Yylex {
 	 * or an I/O-Error occurs.
 	 *
 	 * @return the next token.
-	 * @exception java.io.IOException if any I/O-Error occurs.
+	 * @throws JSONParseException if any I/O-Error occurs.
+	 * @throws java.io.IOException
 	 */
 	public Yytoken yylex() throws java.io.IOException, JSONParseException {
 		int zzInput;
@@ -625,7 +626,7 @@ class Yylex {
 			} else
 				switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
 					case 1: {
-						throw new JSONParseException(this.yychar, JSONParseException.Problems.UNEXPECTED_CHARACTER, new Character(this.yycharat(0)));
+						throw new JSONParseException(this.yychar, JSONParseException.Problems.UNEXPECTED_CHARACTER, String.valueOf(this.yycharat(0)));
 					}
 					// fall through
 					case 24:

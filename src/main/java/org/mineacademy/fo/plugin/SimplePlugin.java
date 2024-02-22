@@ -22,16 +22,15 @@ import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.Messenger;
+import org.mineacademy.fo.BungeeUtil;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.MinecraftVersion;
@@ -48,12 +47,12 @@ import org.mineacademy.fo.event.SimpleListener;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.MenuListener;
+import org.mineacademy.fo.menu.tool.Tool;
 import org.mineacademy.fo.menu.tool.ToolsListener;
 import org.mineacademy.fo.metrics.Metrics;
 import org.mineacademy.fo.model.DiscordListener;
 import org.mineacademy.fo.model.FolderWatcher;
 import org.mineacademy.fo.model.HookManager;
-import org.mineacademy.fo.model.JavaScriptExecutor;
 import org.mineacademy.fo.model.SimpleHologram;
 import org.mineacademy.fo.model.SimpleScoreboard;
 import org.mineacademy.fo.model.SpigotUpdater;
@@ -220,23 +219,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		source = instance.getFile();
 		data = instance.getDataFolder();
 
-		final String version = Bukkit.getVersion();
-
-		if (this.suggestPaper() && !version.contains("Paper")
-				&& !version.contains("Purpur")
-				&& !version.contains("NachoSpigot")
-				&& !version.contains("-Spigot")
-				&& MinecraftVersion.atLeast(V.v1_8)) {
-			this.getLogger().warning(Common.consoleLine());
-			this.getLogger().warning("You're not using Paper!");
-			this.getLogger().warning("Detected: " + version);
-			this.getLogger().warning("");
-			this.getLogger().warning("Third party forks are known to alter server in unwanted ways.");
-			this.getLogger().warning("If you experience issues with " + named + ", download Paper");
-			this.getLogger().warning("from PaperMC.io, otherwise you may not receive support.");
-			this.getLogger().warning(Common.consoleLine());
-		}
-
 		// Load libraries where Spigot does not do this automatically
 		this.loadLibraries();
 
@@ -290,9 +272,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Common.setLogPrefix(oldLogPrefix);
 		}
 
-		// Inject server-name to newer MC versions that lack it
-		Remain.injectServerName();
-
 		// Load our dependency system
 		try {
 			HookManager.loadDependencies();
@@ -314,6 +293,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			final Messenger messenger = this.getServer().getMessenger();
 
 			// Always make the main channel available
+			if (!messenger.isIncomingChannelRegistered(this, "BungeeCord"))
+				messenger.registerIncomingPluginChannel(this, "BungeeCord", BungeeListener.BungeeListenerImpl.getInstance());
+
 			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
 				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
 
@@ -331,6 +313,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 				return;
 			}
+
+			// AutoRegister finds this class and saves it
+			CompMetadata.MetadataFile.saveOnce();
 
 			this.onReloadablesStart();
 
@@ -366,9 +351,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 				this.reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
 			}
-
-			// Prepare Nashorn engine
-			JavaScriptExecutor.run("");
 
 			// Finish off by starting metrics (currently bStats)
 			if (this.getMetricsPluginId() != -1)
@@ -503,15 +485,17 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * Then you just call this method and parse the field into it from your onReloadablesStart method.
 	 */
 	protected final void registerBungeeCord(@NonNull BungeeListener bungee) {
+		final String chanelName = bungee.getChannel();
 		final Messenger messenger = this.getServer().getMessenger();
 
-		if (!messenger.isIncomingChannelRegistered(this, bungee.getChannel()))
-			messenger.registerIncomingPluginChannel(this, bungee.getChannel(), bungee);
+		if (!messenger.isIncomingChannelRegistered(this, chanelName))
+			messenger.registerIncomingPluginChannel(this, chanelName, BungeeListener.BungeeListenerImpl.getInstance());
 
-		if (!messenger.isOutgoingChannelRegistered(this, bungee.getChannel()))
-			messenger.registerOutgoingPluginChannel(this, bungee.getChannel());
+		if (!messenger.isOutgoingChannelRegistered(this, chanelName))
+			messenger.registerOutgoingPluginChannel(this, chanelName);
 
 		this.reloadables.registerEvents(bungee);
+
 	}
 
 	/**
@@ -800,6 +784,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			final Messenger messenger = this.getServer().getMessenger();
 
 			// Always make the main channel available
+			if (!messenger.isIncomingChannelRegistered(this, "BungeeCord"))
+				messenger.registerIncomingPluginChannel(this, "BungeeCord", BungeeListener.BungeeListenerImpl.getInstance());
+
 			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
 				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
 
@@ -814,9 +801,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			this.onPluginPreReload();
 			this.reloadables.reload();
 
-			final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
-			metadata.save();
-			metadata.reload();
+			if (CompMetadata.isLegacy()) {
+				final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
+
+				metadata.save();
+				metadata.reload();
+			}
 
 			SimpleHologram.onReload();
 
@@ -869,6 +859,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		BlockVisualizer.stopAll();
 		FolderWatcher.stopThreads();
 
+		// Force metadata save on old MC versions upon reload/disable
+		CompMetadata.MetadataFile.saveOnce();
+
 		FileConfig.clearLoadedSections();
 
 		try {
@@ -885,7 +878,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
 		this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
 
-		this.getServer().getScheduler().cancelTasks(this);
+		Common.cancelTasks();
 
 		this.mainCommand = null;
 	}
@@ -1193,15 +1186,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	}
 
 	/**
-	 * Should we send a suggestion to use PaperSpigot if not using it?
-	 *
-	 * @return defaults to true
-	 */
-	public boolean suggestPaper() {
-		return true;
-	}
-
-	/**
 	 * Returns the default or "main" bungee listener you use. This is checked from {@link BungeeUtil#sendPluginMessage(org.mineacademy.fo.bungee.BungeeMessageType, Object...)}
 	 * so that you won't have to pass in channel name each time and we use channel name from this listener instead.
 	 *
@@ -1280,63 +1264,5 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Override
 	public final PluginCommand getCommand(final String name) {
 		return super.getCommand(name);
-	}
-
-	/**
-	 * @deprecated do not use
-	 */
-	@Deprecated
-	@Override
-	public final boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
-		throw this.unsupported("onCommand");
-	}
-
-	/**
-	 * @deprecated do not use
-	 */
-	@Deprecated
-	@Override
-	public final List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-		throw this.unsupported("onTabComplete");
-	}
-
-	/**
-	 * @deprecated do not use
-	 */
-	@Deprecated
-	@Override
-	public final FileConfiguration getConfig() {
-		throw this.unsupported("getConfig");
-	}
-
-	/**
-	 * @deprecated do not use
-	 */
-	@Deprecated
-	@Override
-	public final void saveConfig() {
-		throw this.unsupported("saveConfig");
-	}
-
-	/**
-	 * @deprecated do not use
-	 */
-	@Deprecated
-	@Override
-	public final void saveDefaultConfig() {
-		throw this.unsupported("saveDefaultConfig");
-	}
-
-	/**
-	 * @deprecated do not use
-	 */
-	@Deprecated
-	@Override
-	public final void reloadConfig() {
-		throw new FoException("Cannot call reloadConfig in " + this.getDataFolder().getName() + ", use reload()!");
-	}
-
-	private FoException unsupported(final String method) {
-		return new FoException("Cannot call " + method + " in " + this.getDataFolder().getName() + ", use YamlConfig or SimpleCommand classes in Foundation for that!");
 	}
 }

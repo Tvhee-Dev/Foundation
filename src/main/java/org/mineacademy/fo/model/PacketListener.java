@@ -1,5 +1,6 @@
 package org.mineacademy.fo.model;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.exception.EventHandledException;
 import org.mineacademy.fo.exception.FoException;
@@ -21,11 +23,15 @@ import org.mineacademy.fo.remain.Remain;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.FieldAccessException;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.AdventureComponentConverter;
 import com.comphenix.protocol.wrappers.EnumWrappers.ChatType;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import com.comphenix.protocol.wrappers.WrappedServerPing;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,6 +45,11 @@ import net.md_5.bungee.api.chat.BaseComponent;
 public abstract class PacketListener {
 
 	/**
+	 * Stores 1.19 system chat packet constructor and Adventure stuff for maximum performance
+	 */
+	private static Class<?> textComponentClass;
+
+	/**
 	 * Called automatically when you use \@AutoRegister, inject
 	 * your packet listeners here.
 	 */
@@ -50,8 +61,6 @@ public abstract class PacketListener {
 	 * @param adapter
 	 */
 	protected void addPacketListener(final SimpleAdapter adapter) {
-		//Valid.checkBoolean(HookManager.isVaultLoaded(), "ProtocolLib integration requires Vault to be installed. Please install that plugin before continuing.");
-
 		HookManager.addPacketListener(adapter);
 	}
 
@@ -123,6 +132,14 @@ public abstract class PacketListener {
 
 				if (event.getPlayer() != null)
 					consumer.accept(event);
+			}
+
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				if (type == PacketType.Play.Server.CHAT || type == PacketType.Play.Client.CHAT) {
+					// Packet can be both sided
+				} else
+					super.onPacketReceiving(event);
 			}
 		});
 	}
@@ -264,7 +281,7 @@ public abstract class PacketListener {
 				if (this.jsonMessage != null && !this.jsonMessage.isEmpty())
 					this.onJsonMessage(this.jsonMessage);
 
-				if (!Common.stripColors(legacyText).equals(Common.stripColors(parsedText)))
+				if (!legacyText.equals(parsedText))
 					this.writeEditedMessage(parsedText, event);
 
 			} finally {
@@ -280,13 +297,56 @@ public abstract class PacketListener {
 			// Reset
 			this.jsonMessage = null;
 
-			// No components for this MC version
+			// Components
 			if (MinecraftVersion.atLeast(V.v1_7)) {
-				if (this.systemChat)
-					this.jsonMessage = event.getPacket().getStrings().read(0);
 
-				else {
+				// System chat
+				if (this.systemChat) {
 
+					try {
+						// Minecraft 1.20.4+ uses Component field instead of text
+						this.jsonMessage = event.getPacket().getChatComponents().read(0).getJson();
+
+					} catch (final Exception ex) {
+						this.jsonMessage = event.getPacket().getStrings().read(0);
+					}
+
+					if (this.jsonMessage != null)
+						return Remain.toLegacyText(this.jsonMessage, false);
+
+					try {
+						final StructureModifier<Object> adventureModifier = event.getPacket().getModifier().withType(AdventureComponentConverter.getComponentClass());
+
+						if (!adventureModifier.getFields().isEmpty()) {
+							final Object comp = adventureModifier.read(0);
+
+							final Class<?> serializerClass = ReflectionUtil.lookupClass("net.kyori.adventure.text.serializer.gson.GsonComponentSerializer");
+							final Object gsonInstance = ReflectionUtil.invokeStatic(serializerClass, "gson");
+
+							final Class<?> componentClass = ReflectionUtil.lookupClass("net.kyori.adventure.text.Component");
+							final Method gsonMethod = ReflectionUtil.getMethod(gsonInstance.getClass(), "serialize", componentClass);
+
+							final String json = ReflectionUtil.invoke(gsonMethod, gsonInstance, comp);
+							this.jsonMessage = WrappedChatComponent.fromJson(json).getJson();
+						}
+
+					} catch (final Throwable ignored) {
+						ignored.printStackTrace();
+						// Ignore if Adventure is unavailable
+					}
+
+					final Object adventureContent = ReflectionUtil.getFieldContent(event.getPacket().getHandle(), "adventure$content");
+
+					if (adventureContent != null) {
+						final List<String> contents = new ArrayList<>();
+
+						this.mergeChildren(adventureContent, contents);
+						final String mergedContents = String.join("", contents);
+
+						return mergedContents;
+					}
+
+				} else {
 					final StructureModifier<Object> packet = event.getPacket().getModifier();
 					final StructureModifier<WrappedChatComponent> chat = event.getPacket().getChatComponents();
 					final WrappedChatComponent component = chat.read(0);
@@ -325,6 +385,7 @@ public abstract class PacketListener {
 				}
 			}
 
+			// No components for this MC version
 			else
 				this.jsonMessage = event.getPacket().getStrings().read(0);
 
@@ -350,23 +411,60 @@ public abstract class PacketListener {
 		}
 
 		/*
+		 * Helper method to get content of all children of the given component
+		 */
+		private void mergeChildren(Object component, List<String> contents) {
+			final Method contentMethod = ReflectionUtil.getMethod(component.getClass(), "content");
+			final Method childrenMethod = ReflectionUtil.getMethod(component.getClass(), "children");
+
+			if (textComponentClass == null)
+				textComponentClass = ReflectionUtil.lookupClass("net.kyori.adventure.text.TextComponent");
+
+			if (textComponentClass.isAssignableFrom(component.getClass())) {
+				contents.add(ReflectionUtil.invoke(contentMethod, component));
+
+				for (final Object child : (List<?>) ReflectionUtil.invoke(childrenMethod, component))
+					mergeChildren(child, contents);
+			}
+		}
+
+		/*
 		 * Writes the edited message as JSON format from the event
 		 */
 		private void writeEditedMessage(String message, PacketEvent event) {
-			final StructureModifier<Object> packet = event.getPacket().getModifier();
+			final PacketContainer packet = event.getPacket();
 
 			this.jsonMessage = Remain.toJson(message);
 
-			if (this.systemChat)
-				event.getPacket().getStrings().writeSafely(0, this.jsonMessage);
-			else if (this.isBaseComponent)
-				packet.writeSafely(this.adventure ? 2 : 1, Remain.toComponent(this.jsonMessage));
+			if (this.systemChat) {
+
+				// We first need to get rid of Adventure library adding an extra field, so that the string JSON will be used below
+				// Thanks to lukalt for help! https://github.com/dmulloy2/ProtocolLib/issues/2330#issuecomment-1517542145
+				try {
+					final StructureModifier<Object> adventureModifier = packet.getModifier().withType(AdventureComponentConverter.getComponentClass());
+
+					if (!adventureModifier.getFields().isEmpty())
+						adventureModifier.write(0, null);
+
+				} catch (final Throwable ignored) {
+					// Ignore if Adventure is unavailable
+				}
+
+				try {
+					packet.getChatComponents().write(0, WrappedChatComponent.fromJson(this.jsonMessage));
+
+				} catch (final FieldAccessException t) {
+					packet.getStrings().write(0, this.jsonMessage);
+				}
+
+			} else if (this.isBaseComponent)
+				packet.getModifier().writeSafely(this.adventure ? 2 : 1, Remain.toComponent(this.jsonMessage));
 
 			else if (MinecraftVersion.atLeast(V.v1_7))
-				event.getPacket().getChatComponents().writeSafely(0, WrappedChatComponent.fromJson(this.jsonMessage));
+				packet.getChatComponents().writeSafely(0, WrappedChatComponent.fromJson(this.jsonMessage));
 
 			else
-				event.getPacket().getStrings().writeSafely(0, SerializedMap.of("text", this.jsonMessage.substring(1, this.jsonMessage.length() - 1)).toJson());
+				packet.getStrings().writeSafely(0, SerializedMap.of("text", this.jsonMessage.substring(1, this.jsonMessage.length() - 1)).toJson());
 		}
 
 		/**

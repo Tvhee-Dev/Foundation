@@ -1,6 +1,7 @@
 package org.mineacademy.fo.remain.nbt;
 
 import org.bukkit.Bukkit;
+import org.mineacademy.fo.Common;
 
 /**
  * This class acts as the "Brain" of the NBTApi. It contains the main logger for
@@ -10,7 +11,9 @@ import org.bukkit.Bukkit;
  * @author tr7zw
  *
  */
+
 enum MinecraftVersion {
+
 	UNKNOWN(Integer.MAX_VALUE), // Use the newest known mappings
 	MC1_7_R4(174),
 	MC1_8_R3(183),
@@ -30,13 +33,15 @@ enum MinecraftVersion {
 	MC1_18_R1(1181, true),
 	MC1_18_R2(1182, true),
 	MC1_19_R1(1191, true),
-	MC1_19_R2(1192, true);
+	MC1_19_R2(1192, true),
+	MC1_19_R3(1193, true),
+	MC1_20_R1(1201, true),
+	MC1_20_R2(1202, true),
+	MC1_20_R3(1203, true);
 
 	private static MinecraftVersion version;
 	private static Boolean isForgePresent;
-
-	// NBT-API Version
-	protected static final String VERSION = "2.11.1";
+	private static Boolean isFoliaPresent;
 
 	private final int versionId;
 	private final boolean mojangMapping;
@@ -105,16 +110,19 @@ enum MinecraftVersion {
 	 * @return The enum for the MinecraftVersion this server is running
 	 */
 	public static MinecraftVersion getVersion() {
-		if (version != null) {
+		if (version != null)
 			return version;
-		}
+
 		final String ver = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
 
 		try {
 			version = MinecraftVersion.valueOf(ver.replace("v", "MC"));
-		} catch (IllegalArgumentException ex) {
+		} catch (final IllegalArgumentException ex) {
 			version = MinecraftVersion.UNKNOWN;
 		}
+
+		if (version == UNKNOWN)
+			Common.warning("NBT-API does not support your server version (" + ver + "). We will try to work as good as we can, but some functions may not work.");
 
 		return version;
 	}
@@ -123,15 +131,29 @@ enum MinecraftVersion {
 	 * @return True, if Forge is present
 	 */
 	public static boolean isForgePresent() {
-		if (isForgePresent != null) {
+		if (isForgePresent != null)
 			return isForgePresent;
-		}
+
 		try {
 			isForgePresent = true;
-		} catch (Exception ex) {
+		} catch (final Exception ex) {
 			isForgePresent = false;
 		}
 		return isForgePresent;
 	}
 
+	/**
+	 * @return True, if Folia is present
+	 */
+	public static boolean isFoliaPresent() {
+		if (isFoliaPresent != null) {
+			return isFoliaPresent;
+		}
+		try {
+			isFoliaPresent = true;
+		} catch (final Exception ex) {
+			isFoliaPresent = false;
+		}
+		return isFoliaPresent;
+	}
 }

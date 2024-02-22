@@ -18,6 +18,7 @@ import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Ghast;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Slime;
@@ -27,10 +28,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.collection.expiringmap.ExpiringMap;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.HookManager;
+import org.mineacademy.fo.model.SimpleRunnable;
 import org.mineacademy.fo.remain.Remain;
 
 import lombok.AccessLevel;
@@ -94,7 +95,14 @@ public final class EntityUtil {
 	public static Entity getTarget(Entity entity) {
 		Entity target = null;
 
-		if (entity instanceof Creature)
+		try {
+			if (entity instanceof Mob)
+				target = ((Mob) entity).getTarget();
+		} catch (final Throwable t) {
+			// Old MC
+		}
+
+		if (target == null && entity instanceof Creature)
 			target = ((Creature) entity).getTarget();
 
 		if (target == null)
@@ -276,7 +284,7 @@ public final class EntityUtil {
 		if (flyListener == null && hitGroundListener == null)
 			throw new FoException("Cannot track entity with fly and hit listeners on null!");
 
-		Common.runTimer(1, new BukkitRunnable() {
+		Common.runTimer(1, new SimpleRunnable() {
 
 			private int elapsedTicks = 0;
 

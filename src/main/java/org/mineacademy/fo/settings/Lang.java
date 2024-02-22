@@ -9,7 +9,7 @@ import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.SerializeUtil.Mode;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.exception.FoScriptException;
 import org.mineacademy.fo.model.JavaScriptExecutor;
 import org.mineacademy.fo.model.SimpleComponent;
 
@@ -217,8 +217,11 @@ public final class Lang extends YamlConfig {
 	 * @param path
 	 * @param scriptVariables
 	 * @param stringVariables
+	 * @deprecated unstable, JavaScript executor might desynchronize and break scriptVariables
+	 *
 	 * @return
 	 */
+	@Deprecated
 	public static String ofScript(String path, SerializedMap scriptVariables, Object... stringVariables) {
 		String script = of(path, stringVariables);
 		Object result;
@@ -231,8 +234,17 @@ public final class Lang extends YamlConfig {
 		try {
 			result = JavaScriptExecutor.run(script, scriptVariables.asMap());
 
-		} catch (final Throwable t) {
-			throw new FoException(t, "Failed to compile localization key '" + path + "' with script: " + script + " (this must be a valid JavaScript code)");
+		} catch (final FoScriptException ex) {
+			Common.logFramed("Failed to compile localization key!",
+					"It must be a valid JavaScript code, if you modified it, check the syntax!",
+					"",
+					"Locale path: '" + path + "'",
+					"Variables: " + scriptVariables,
+					"String variables: " + Common.join(stringVariables),
+					"Script: " + script,
+					"Error: %error%");
+
+			throw ex;
 		}
 
 		return result.toString();

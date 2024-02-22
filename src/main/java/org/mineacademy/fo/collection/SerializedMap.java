@@ -90,6 +90,7 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 	 * If the key already exist, it is ignored
 	 *
 	 * @param anotherMap
+	 * @return
 	 */
 	public SerializedMap mergeFrom(final SerializedMap anotherMap) {
 		for (final Map.Entry<String, Object> entry : anotherMap.entrySet()) {
@@ -670,7 +671,7 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 	 * @param <T>
 	 * @param key
 	 * @param type
-	 * @param parameters, the deserialize parameters applied when creating the list for each list key
+	 * @param parameters the deserialize parameters applied when creating the list for each list key
 	 * @return
 	 */
 	public <T> List<T> getList(final String key, final Class<T> type, final Object... parameters) {
@@ -1186,7 +1187,7 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 			if (parsed instanceof JSONObject)
 				return of(parsed, Mode.JSON);
 
-			throw new FoException("Unable to deserialize " + (parsed != null ? parsed.getClass() : "unknown class") + " from json: " + json);
+			throw new FoException("Expected JSONObject, got " + (parsed != null ? parsed.getClass() : "unknown class") + " from raw JSON input: " + json);
 
 		} catch (final Throwable secondThrowable) {
 			Common.throwError(secondThrowable, "Failed to parse JSON from " + json);

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
@@ -14,13 +15,17 @@ import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.expiringmap.ExpiringMap;
+import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.EventHandledException;
+import org.mineacademy.fo.exception.FoScriptException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.Remain;
 
@@ -94,6 +99,7 @@ public final class JavaScriptExecutor {
 
 			Common.logFramed(false, Common.toArray(warningMessage));
 		}
+
 	}
 
 	/**
@@ -101,8 +107,9 @@ public final class JavaScriptExecutor {
 	 *
 	 * @param javascript
 	 * @return
+	 * @throws FoScriptException
 	 */
-	public static Object run(final String javascript) {
+	public static Object run(final String javascript) throws FoScriptException {
 		return run(javascript, null, null);
 	}
 
@@ -113,8 +120,10 @@ public final class JavaScriptExecutor {
 	 * @param javascript
 	 * @param sender
 	 * @return
+	 *
+	 * @throws FoScriptException
 	 */
-	public static Object run(final String javascript, final CommandSender sender) {
+	public static Object run(final String javascript, final CommandSender sender) throws FoScriptException {
 		return run(javascript, sender, null);
 	}
 
@@ -126,9 +135,20 @@ public final class JavaScriptExecutor {
 	 * @param sender
 	 * @param event
 	 * @return
+	 * @throws FoScriptException
 	 */
-	public static Object run(@NonNull String javascript, final CommandSender sender, final Event event) {
-		final String oldCode = new String(javascript);
+	public static Object run(@NonNull String javascript, final CommandSender sender, final Event event) throws FoScriptException {
+
+		// Mohist is unsupported
+		if (Bukkit.getName().equals("Mohist"))
+			return null;
+
+		// Speed up
+		if (javascript.equalsIgnoreCase("true") || javascript.equalsIgnoreCase("!false") || javascript.equalsIgnoreCase("yes"))
+			return true;
+
+		if (javascript.equalsIgnoreCase("false") || javascript.equalsIgnoreCase("!true") || javascript.equalsIgnoreCase("no"))
+			return false;
 
 		// Cache for highest performance
 		Map<String, Object> cached = sender instanceof Player ? resultCache.get(((Player) sender).getUniqueId()) : null;
@@ -147,8 +167,53 @@ public final class JavaScriptExecutor {
 			return null;
 		}
 
+		Object result = null;
+
 		try {
-			engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
+
+			// Workaround hasPermission for null senders (i.e. Discord)
+			final Pattern pattern = Pattern.compile("player\\.hasPermission\\(\"([^\"]+)\"\\)");
+			final Matcher matcher = pattern.matcher(javascript);
+
+			while (matcher.find()) {
+				final String permission = matcher.group(1);
+				final boolean hasPermission = sender == null ? false : sender.hasPermission(permission);
+
+				javascript = javascript.replace(matcher.group(), String.valueOf(hasPermission));
+			}
+
+			// Find and replace all %syntax% and {syntax} variables since they were not replaced for Discord
+			if (sender instanceof DiscordSender) {
+
+				// Replace by line to avoid the {...} in "function() { return false; }" being replaced to "function() false"
+				final String[] copy = javascript.split("\n");
+				final String[] replaced = new String[copy.length];
+
+				for (int i = 0; i < copy.length; i++) {
+					String line = copy[i];
+
+					line = replaceVariables(line, Variables.VARIABLE_PATTERN.matcher(line));
+					line = replaceVariables(line, Variables.BRACKET_VARIABLE_PATTERN.matcher(line));
+
+					replaced[i] = line;
+				}
+
+				javascript = String.join("\n", replaced);
+			}
+
+			if (sender == null && javascript.contains("player.")) {
+				Common.warning("Not running JavaScript because it contains 'player' but player was not provided. Script: " + javascript);
+
+				return false;
+			}
+
+			if (sender instanceof DiscordSender && javascript.contains("player.")) {
+				Common.warning("Not running JavaScript because it contains 'player' but player was on Discord. Set Sender_Condition to '{sender_is_player}' to remove this warning next to your code. Script: " + javascript);
+
+				return false;
+			}
+
+			Debugger.debug("javascript", "Sender: " + (sender == null ? "null" : sender.getName()) + " with code: " + javascript);
 
 			if (sender != null)
 				engine.put("player", sender);
@@ -156,20 +221,21 @@ public final class JavaScriptExecutor {
 			if (event != null)
 				engine.put("event", event);
 
-			if (sender instanceof DiscordSender) {
-				javascript = replaceVariables(javascript, Variables.VARIABLE_PATTERN.matcher(javascript));
-				javascript = replaceVariables(javascript, Variables.BRACKET_VARIABLE_PATTERN.matcher(javascript));
-			}
-
-			Object result = engine.eval(javascript);
+			result = engine.eval(javascript);
 
 			if (result instanceof String) {
-				final String resultString = Common.stripColors((String) result).toLowerCase();
+				String resultString = Common.stripColors((String) result).trim().toLowerCase();
 
-				if (resultString.equals("true"))
+				if (resultString.startsWith("\"") || resultString.startsWith("'"))
+					resultString = resultString.substring(1);
+
+				if (resultString.endsWith("\"") || resultString.endsWith("'"))
+					resultString = resultString.substring(0, resultString.length() - 1);
+
+				if (resultString.equalsIgnoreCase("true"))
 					result = true;
 
-				else if (resultString.equals("false"))
+				else if (resultString.equalsIgnoreCase("false"))
 					result = false;
 			}
 
@@ -183,16 +249,20 @@ public final class JavaScriptExecutor {
 
 			return result;
 
-		} catch (final Throwable ex) {
+		} catch (final ScriptException ex) {
+			final String senderName = (sender == null ? "null sender" : sender.getName());
 			final String message = ex.toString();
-			String error = "Script execution failed for";
+			String errorMessage = "Unable to parse JavaScript code on line '" + ex.getLineNumber() + "' for sender '" + senderName + "'. Error: " + message;
+
+			if (message.contains("ReferenceError:") && message.contains("\"player\" is not defined"))
+				return false;
 
 			if (message.contains("ReferenceError:") && message.contains("is not defined"))
-				error = "Found invalid or unparsed variable in";
+				errorMessage = "Found invalid or unparsed variable for sender '" + senderName + "' on line " + ex.getLineNumber() + ": " + ex.getMessage();
 
 			// Special support for throwing exceptions in the JS code so that users
 			// can send messages to player directly if upstream supports that
-			final String cause = ex.getCause().toString();
+			final String cause = ex.getCause() != null ? ex.getCause().toString() : "";
 
 			if (ex.getCause() != null && cause.contains("event handled")) {
 				final String[] errorMessageSplit = cause.contains("event handled: ") ? cause.split("event handled\\: ") : new String[0];
@@ -203,7 +273,10 @@ public final class JavaScriptExecutor {
 				throw new EventHandledException(true);
 			}
 
-			throw new RuntimeException(error + " '" + oldCode + "'", ex);
+			throw new FoScriptException(errorMessage, javascript, ex.getLineNumber(), ex);
+
+		} finally {
+			engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
 		}
 	}
 
@@ -225,8 +298,13 @@ public final class JavaScriptExecutor {
 	 * @param replacements
 	 *
 	 * @return
+	 * @throws FoScriptException
 	 */
-	public static Object run(final String javascript, final Map<String, Object> replacements) {
+	public static Object run(@NonNull final String javascript, @NonNull final Map<String, Object> replacements) throws FoScriptException {
+
+		// Mohist is unsupported
+		if (Bukkit.getName().equals("Mohist"))
+			return javascript;
 
 		if (engine == null) {
 			Common.warning("Not running script because JavaScript library is missing "
@@ -235,17 +313,24 @@ public final class JavaScriptExecutor {
 			return javascript;
 		}
 
+		for (final Map.Entry<String, Object> replacement : replacements.entrySet()) {
+			final String key = replacement.getKey();
+			Valid.checkNotNull(key, "Key can't be null in javascript variables for code " + javascript + ": " + replacements);
+
+			final Object value = replacement.getValue();
+			Valid.checkNotNull(value, "Value can't be null in javascript variables for key " + key + ": " + replacements);
+
+			engine.put(key, value);
+		}
+
 		try {
-			engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
-
-			if (replacements != null)
-				for (final Map.Entry<String, Object> replacement : replacements.entrySet())
-					engine.put(replacement.getKey(), replacement.getValue());
-
 			return engine.eval(javascript);
 
 		} catch (final ScriptException ex) {
-			throw new RuntimeException("Script execution failed for '" + javascript + "'", ex);
+			throw new FoScriptException(ex.getMessage(), javascript, ex.getLineNumber(), ex);
+
+		} finally {
+			engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
 		}
 	}
 }

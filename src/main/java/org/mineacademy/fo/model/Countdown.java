@@ -1,10 +1,7 @@
 package org.mineacademy.fo.model;
 
-import org.bukkit.Bukkit;
-import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.plugin.SimplePlugin;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -41,9 +38,14 @@ public abstract class Countdown implements Runnable {
 	private int secondsSinceStart = 0;
 
 	/**
+	 * Is this countdown currently paused ?
+	 */
+	private boolean paused = false;
+
+	/**
 	 * The internal task from Bukkit associated with this countdown
 	 */
-	private int taskId = -1;
+	private SimpleTask task = null;
 
 	/**
 	 * Create new countdown from the given time
@@ -124,24 +126,73 @@ public abstract class Countdown implements Runnable {
 	}
 
 	/**
+	 * Returns the amount of time that has passed since the start in seconds
+	 *
+	 * @return
+	 */
+	public int getElapsedTime() {
+		return this.secondsSinceStart;
+	}
+
+	/**
+	 * Set how much time has passed for this countdown.
+	 *
+	 * @param time
+	 */
+	public void setElapsedTime(final SimpleTime time) {
+		this.setElapsedTime((int) time.getTimeSeconds());
+	}
+
+	/**
+	 * Set how much time has passed for this countdown.
+	 *
+	 * @param secondsElapsed The time in seconds
+	 */
+	public void setElapsedTime(final int secondsElapsed) {
+		this.secondsSinceStart = secondsElapsed;
+	}
+
+	/**
 	 * Starts this countdown failing if it is already running
 	 */
 	public final void launch() {
 		Valid.checkBoolean(!this.isRunning(), "Task " + this + " already scheduled!");
+		Valid.checkBoolean(!this.paused, "You cannot launch a countdown that is paused!");
 
-		final BukkitTask task = Bukkit.getScheduler().runTaskTimer(SimplePlugin.getInstance(), this, START_DELAY, TICK_PERIOD);
-		this.taskId = task.getTaskId();
+		this.task = Common.runTimer(START_DELAY, TICK_PERIOD, this);
 
 		this.onStart();
+	}
+
+	/**
+	 * Pauses this countdown, failing if it is not scheduled
+	 */
+	public final void pause() {
+		Valid.checkBoolean(this.isRunning(), "Countdown must be scheduled in order to pause it!");
+
+		this.task.cancel();
+
+		this.task = null;
+		this.paused = true;
+	}
+
+	/**
+	 * Resumes this countdown, failing if it is not already paused (use {@link #isPaused()})
+	 */
+	public final void resume() {
+		Valid.checkBoolean(this.paused, "Countdown must be paused in order to resume it!");
+
+		this.task = Common.runTimer(START_DELAY, TICK_PERIOD, this);
+		this.paused = false;
 	}
 
 	/**
 	 * Cancels this countdown, failing if it is not scheduled (use {@link #isRunning()})
 	 */
 	public final void cancel() {
-		Bukkit.getScheduler().cancelTask(this.getTaskId());
+		this.task.cancel();
 
-		this.taskId = -1;
+		this.task = null;
 		this.secondsSinceStart = 0;
 	}
 
@@ -151,22 +202,20 @@ public abstract class Countdown implements Runnable {
 	 * @return
 	 */
 	public final boolean isRunning() {
-		return this.taskId != -1;
+		return this.task != null;
 	}
 
 	/**
-	 * Return the bukkit task or fails if not running
+	 * Returns whether this countdown is paused.
 	 *
 	 * @return
 	 */
-	public final int getTaskId() {
-		Valid.checkBoolean(this.isRunning(), "Task " + this + " not scheduled yet");
-
-		return this.taskId;
+	public final boolean isPaused() {
+		return this.paused;
 	}
 
 	@Override
 	public final String toString() {
-		return this.getClass().getSimpleName() + "{" + this.countdownSeconds + ", id=" + this.taskId + "}";
+		return this.getClass().getSimpleName() + "{" + this.countdownSeconds + ", taskId=" + (this.isRunning() ? this.task.getTaskId() : "not running") + "}";
 	}
 }

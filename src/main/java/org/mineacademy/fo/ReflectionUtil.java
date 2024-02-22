@@ -204,7 +204,7 @@ public final class ReflectionUtil {
 	 * @return
 	 */
 	public static <T> T getFieldContent(Class<?> clazz, final String field, final Object instance) {
-		final String originalClassName = clazz.getSimpleName();
+		final String originalClassName = new String(clazz.getName());
 
 		do
 			// note: getDeclaredFields() fails if any of the fields are classes that cannot be loaded
@@ -378,7 +378,7 @@ public final class ReflectionUtil {
 	 */
 	public static Method getMethod(final Class<?> clazz, final String methodName) {
 		for (final Method method : clazz.getMethods())
-			if (method.getName().equals(methodName)) {
+			if (method.getName().equals(methodName) && method.getParameterCount() == 0) {
 				method.setAccessible(true);
 
 				return method;
@@ -457,8 +457,12 @@ public final class ReflectionUtil {
 	 * @param params
 	 * @return
 	 */
-	public static <T> T invoke(final String methodName, final Object instance, final Object... params) {
-		return invoke(getMethod(instance.getClass(), methodName), instance, params);
+	public static <T> T invoke(@NonNull final String methodName, @NonNull final Object instance, final Object... params) {
+		final List<Class<?>> args = Common.convert(params, Object::getClass);
+		final Method method = getMethod(instance.getClass(), methodName, args.toArray(new Class<?>[args.size()]));
+		Valid.checkNotNull(method, "Unable to invoke " + methodName + "(" + Common.join(params) + ") because such method was not found in " + instance.getClass());
+
+		return invoke(method, instance, params);
 	}
 
 	/**
@@ -471,7 +475,7 @@ public final class ReflectionUtil {
 	 * @return
 	 */
 	public static <T> T invoke(final Method method, final Object instance, final Object... params) {
-		Valid.checkNotNull(method, "Method cannot be null for " + instance);
+		Valid.checkNotNull(method, "Method cannot be null for instance " + instance + " with params " + Common.join(params, ", "));
 
 		try {
 			return (T) method.invoke(instance, params);

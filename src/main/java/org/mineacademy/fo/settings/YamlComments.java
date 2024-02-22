@@ -27,6 +27,7 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import lombok.NonNull;
+import lombok.SneakyThrows;
 
 /**
  * A class to update/add new sections/keys to your config while keeping your current values and keeping your comments
@@ -45,51 +46,46 @@ final class YamlComments {
 	/**
 	 * Update a yaml file from a resource inside your plugin jar
 	 *
-	 * @param jarPath The yaml file name to update from, typically config.yml
-	 * @param diskFile The yaml file to update
-	 * @param oldContents the actual yaml content from the old file, to prevent overriding values
+	 * @param resourceName The yaml file name to update from, typically config.yml
+	 * @param toUpdate The yaml file to update
 	 * @param ignoredSections The sections to ignore from being forcefully updated & comments set
-	 *
-	 * @throws IOException If an IOException occurs
 	 */
-	static void writeComments(@NonNull String jarPath, @NonNull File diskFile, @Nullable String oldContents, @NonNull List<String> ignoredSections) throws IOException {
+	@SneakyThrows
+	public static void writeComments(@NonNull String resourceName, @NonNull File toUpdate, @NonNull List<String> ignoredSections) {
 
-		final List<String> newLines = FileUtil.getInternalFileContent(jarPath);
+		final List<String> newLines = FileUtil.getInternalFileContent(resourceName);
 
-		final YamlConfiguration oldConfig = new YamlConfiguration();
+		final YamlConfiguration currentConfig = new YamlConfiguration();
 
 		try {
-			if (oldContents != null)
-				oldConfig.loadFromString(oldContents);
-			else
-				oldConfig.load(diskFile);
+			currentConfig.load(toUpdate);
 
 		} catch (final Throwable t) {
 			Remain.sneaky(t);
 		}
 
-		final YamlConfiguration newConfig = new YamlConfiguration();
+		final YamlConfiguration defaultConfig = new YamlConfiguration();
 
 		try {
-			newConfig.loadFromString(String.join("\n", newLines));
+			defaultConfig.loadFromString(String.join("\n", newLines));
 
 		} catch (final Throwable t) {
 			Remain.sneaky(t);
 		}
 
-		final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(diskFile), StandardCharsets.UTF_8));
+		final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(toUpdate), StandardCharsets.UTF_8));
 
 		// ignoredSections can ONLY contain configurations sections
 		for (final String ignoredSection : ignoredSections)
-			if (newConfig.isSet(ignoredSection))
-				Valid.checkBoolean(newConfig.isConfigurationSection(ignoredSection), "Can only ignore config sections in " + jarPath + " (file " + diskFile + ")" + " not '" + ignoredSection + "' that is " + newConfig.get(ignoredSection));
+			if (defaultConfig.isSet(ignoredSection))
+				Valid.checkBoolean(defaultConfig.isConfigurationSection(ignoredSection), "Can only ignore config sections in " + resourceName + " (file " + toUpdate + ")" + " not '" + ignoredSection + "' that is " + defaultConfig.get(ignoredSection));
 
 		// Save keys added to config that are not in default and would otherwise be lost
-		final Set<String> newKeys = newConfig.getKeys(true);
+		final Set<String> newKeys = defaultConfig.getKeys(true);
 		final Map<String, Object> removedKeys = new HashMap<>();
 
 		outerLoop:
-		for (final Map.Entry<String, Object> oldEntry : oldConfig.getValues(true).entrySet()) {
+		for (final Map.Entry<String, Object> oldEntry : currentConfig.getValues(true).entrySet()) {
 			final String oldKey = oldEntry.getKey();
 
 			for (final String ignoredKey : ignoredSections)
@@ -102,7 +98,7 @@ final class YamlComments {
 
 		// Move to unused/ folder and retain old path
 		if (!removedKeys.isEmpty()) {
-			final File backupFile = FileUtil.getOrMakeFile("unused/" + diskFile.getName());
+			final File backupFile = FileUtil.getOrMakeFile("unused/" + toUpdate.getName());
 
 			final FileConfiguration backupConfig = YamlConfiguration.loadConfiguration(backupFile);
 
@@ -111,16 +107,16 @@ final class YamlComments {
 
 			backupConfig.save(backupFile);
 
-			Common.warning("The following entries in " + diskFile.getName() + " are unused and were moved into " + backupFile + ": " + removedKeys.keySet());
+			Common.warning("The following entries in " + toUpdate.getName() + " are unused and were moved into " + backupFile + ": " + removedKeys.keySet());
 		}
 
 		final DumperOptions dumperOptions = new DumperOptions();
 		dumperOptions.setWidth(4096);
 
 		final Yaml yaml = new Yaml(dumperOptions);
-		final Map<String, String> comments = parseComments(newLines, ignoredSections, oldConfig, yaml);
+		final Map<String, String> comments = parseComments(newLines, currentConfig);
 
-		write(newConfig, oldConfig, comments, ignoredSections, writer, yaml);
+		write(defaultConfig, currentConfig, comments, ignoredSections, writer, yaml);
 	}
 
 	// Write method doing the work.
@@ -337,7 +333,7 @@ final class YamlComments {
 
 	//Key is the config key, value = comment and/or ignored sections
 	//Parses comments, blank lines, and ignored sections
-	private static Map<String, String> parseComments(List<String> lines, List<String> ignoredSections, FileConfiguration oldConfig, Yaml yaml) {
+	private static Map<String, String> parseComments(List<String> lines, FileConfiguration oldConfig) {
 		final Map<String, String> comments = new HashMap<>();
 		final StringBuilder builder = new StringBuilder();
 		final StringBuilder keyBuilder = new StringBuilder();

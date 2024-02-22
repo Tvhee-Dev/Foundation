@@ -35,6 +35,8 @@ import org.mineacademy.fo.SerializeUtil.Mode;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.command.SimpleCommand;
+import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.exception.EventHandledException;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.BoxedMessage;
@@ -946,6 +948,9 @@ public abstract class FileConfig {
 	public final List<Object> getList(final String path) {
 		final Object obj = this.getObject(path);
 
+		if (obj != null && obj.toString().equals("[]"))
+			return new ArrayList<>();
+
 		return obj instanceof Collection<?> ? new ArrayList<>((Collection<Object>) obj) : obj != null ? Arrays.asList(obj) : new ArrayList<>();
 	}
 
@@ -1163,6 +1168,9 @@ public abstract class FileConfig {
 	 * Attempts to load the file configuration, not saving any changes made since last loading it.
 	 */
 	public final void reload() {
+		if (this.file == null && this.skipSaveIfNoFile())
+			return;
+
 		Valid.checkNotNull(this.file, "Cannot call reload() before loading a file!");
 
 		this.load(this.file);
@@ -1279,6 +1287,9 @@ public abstract class FileConfig {
 	 * Save the configuration to the file immediately (you need to call loadConfiguration(File) first)
 	 */
 	public final void save() {
+		if (this.file == null && this.skipSaveIfNoFile())
+			return;
+
 		Valid.checkNotNull(this.file, "Cannot call save() for " + this + " when no file was set! Call load first!");
 
 		this.save(this.file);
@@ -1385,12 +1396,22 @@ public abstract class FileConfig {
 	}
 
 	/**
+	 * false (default) = will raise an exception if no file is set and attempting to call save()
+	 * true = will fail gracefully in the above scenario
+	 *
+	 * @return
+	 */
+	protected boolean skipSaveIfNoFile() {
+		return false;
+	}
+
+	/**
 	 * Implementation by specific configurations to generate file contents to save.
 	 *
 	 * @return
 	 */
 	@NonNull
-	abstract String saveToString();
+	public abstract String saveToString();
 
 	/**
 	 * Override to implement custom saving mechanism, used automatically in {@link #onSave()}
@@ -1531,7 +1552,7 @@ public abstract class FileConfig {
 	 * @return
 	 */
 	public final String getFileName() {
-		return this.file == null ? "null" : this.file.getName();
+		return this.file == null ? "no file" : this.file.getName();
 	}
 
 	/**
